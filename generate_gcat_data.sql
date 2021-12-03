@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
--- Prerequisites
+-- Prerequisites - one time step
 --------------------------------------------------------------------------------
 /*
 -- # Prequisites
@@ -15,7 +15,7 @@ Cd into the directory and run this command as PDB SYS:
 
 
 --------------------------------------------------------------------------------
--- Create OCI database
+-- Create Oracle Cloud Infrastructure (OCI) database - one time step
 --------------------------------------------------------------------------------
 
 Create Oracle Cloud account.
@@ -74,7 +74,7 @@ Test database link:
 
 
 --------------------------------------------------------------------------------
--- Design
+-- Design - one time step
 --------------------------------------------------------------------------------
 
 Packages:
@@ -83,8 +83,9 @@ Packages:
 	gcat_loader
 
 Column names:
-	Are prefixed to uniquely identify their table, with the rest of the name based on the GCAT name.
-	
+	Column names have a unique prefix plus the rest of the name based on the GCAT name. The prefix helps in complicated SQL statements where multiple tables have similar column names.
+	Names that are normal words are separated by an underscore. For example, "ShortName" becomes short_name, but "EName" stays as ename.
+
 
 Tables:
 	* means done.
@@ -119,7 +120,7 @@ ENGINE
 	ENGINE_PROPELLANT
 
 LAUNCH_VEHICLE_STAGE
-
+;
 
 
 
@@ -128,85 +129,384 @@ LAUNCH_VEHICLE_STAGE
 -- Create helper objects - one time step.
 --------------------------------------------------------------------------------
 
+create or replace package gcat_helper authid current_user is
+	c_version constant varchar2(10) := '0.0.1';
 
+	--This list is in an order that could be used to create objets.
+	--The order matters because of foreign key constraints.
+	--Use the reverse order to drop them.
+	c_ordered_objects constant sys.odcivarchar2list := sys.odcivarchar2list
+	(
+		'ORGANIZATION',
+		'PLATFORM',
+		'ORGANIZATION_ORG_TYPE',
+		'SITE',
+		'SITE_ORG',
+		'LAUNCH_VEHICLE_FAMILY',
+		'LAUNCH_VEHICLE',
+		'LAUNCH_VEHICLE_MANUFACTURER',
+		'LAUNCH',
+		'LAUNCH_PAYLOAD_ORG',
+		'LAUNCH_AGENCY',
+		'SATELLITE',
+		'SATELLITE_ORG',
+		'ENGINE',
+		'STAGE',
+		'LAUNCH_VEHICLE_STAGE',
+		'STAGE_MANUFACTURER',
+		'PROPELLANT',
+		'ENGINE_PROPELLANT',
+		'ENGINE_MANUFACTURER'
+	);
 
--- From: https://oracle-base.com/articles/misc/apex_data_parser
-CREATE OR REPLACE FUNCTION file_to_blob (p_dir       IN  VARCHAR2,
-                                         p_filename  IN  VARCHAR2)
-  RETURN BLOB
-  -- JH 2021-11-06 Added this line:
-  authid current_user
-AS
-  l_bfile  BFILE;
-  l_blob   BLOB;
-
-  l_dest_offset INTEGER := 1;
-  l_src_offset  INTEGER := 1;
-BEGIN
-  l_bfile := BFILENAME(p_dir, p_filename);
-  DBMS_LOB.fileopen(l_bfile, DBMS_LOB.file_readonly);
-  DBMS_LOB.createtemporary(l_blob, FALSE);
-  IF DBMS_LOB.getlength(l_bfile) > 0 THEN
-    DBMS_LOB.loadblobfromfile (
-      dest_lob    => l_blob,
-      src_bfile   => l_bfile,
-      amount      => DBMS_LOB.lobmaxsize,
-      dest_offset => l_dest_offset,
-      src_offset  => l_src_offset);
-  END IF;
-  DBMS_LOB.fileclose(l_bfile);
-  RETURN l_blob;
-END file_to_blob;
+	function file_to_blob (p_dir in varchar2, p_filename in varchar2) return blob;
+	function get_nt_from_list(p_list in varchar2, p_delimiter in varchar2) return sys.odcivarchar2list;
+	procedure vague_date_and_precision(p_date_string in varchar2, p_date out date, p_precision out varchar2);
+	function vague_to_date(p_date_string in varchar2) return date;
+	function vague_to_precision(p_date_string in varchar2) return varchar2;
+	function gcat_to_number(p_number_string varchar2) return number;
+end gcat_helper;
 /
 
-create or replace function get_nt_from_list
-(
-	p_list in varchar2,
-	p_delimiter in varchar2
-) return sys.odcivarchar2list is
-/*
-	Purpose: Split a list of strings into a nested table of string.
-*/
-	v_index number := 0;
-	v_item varchar2(32767);
-	v_results sys.odcivarchar2list := sys.odcivarchar2list();
-begin
-	--Split.
-	loop
-		v_index := v_index + 1;
-		v_item := regexp_substr(p_list, '[^' || p_delimiter || ']+', 1, v_index);
-		exit when v_item is null;
-		v_results.extend;
-		v_results(v_results.count) := v_item;		
-	end loop;
+create or replace package body gcat_helper is
 
-	return v_results;
+	---------------------------------------
+	-- Purpose: Safely convert the vague date format into an Oracle date and precision.
+	-- (TODO: Should I use a timestamp? Do any vague dates have millisecond precision?)
+	procedure vague_date_and_precision
+	(
+		p_date_string in  varchar2,
+		p_date        out date,
+		p_precision   out varchar2
+	) is
+		v_date_string varchar2(4000);
+		v_has_question_mark boolean := false;
+	begin
+
+		--Find and remove question mark, if it exists.
+		if p_date_string like '%?' then
+			v_date_string := substr(p_date_string, 1, length(p_date_string)-1);
+			v_has_question_mark := true;
+		else
+			v_date_string := p_date_string;
+			v_has_question_mark := false;
+		end if;
+
+		--If the date only has 3 digits for a year, add a digit to the front.
+		if regexp_like(v_date_string, '^[0-9][0-9][0-9]$') or regexp_like(v_date_string, '^[0-9][0-9][0-9] %') then
+			v_date_string := '0' || v_date_string;
+		end if;
+
+		--Find the correct formt, looking from largest to smallest value.
+		if v_date_string is null or v_date_string = '-' or v_date_string = '*' then
+			null;
+		elsif v_date_string like '%M' then
+			v_date_string := replace(v_date_string, 'M');
+			p_date := to_date(to_char((to_number(v_date_string) - 1) * 1000) || '-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
+			if v_has_question_mark then
+				p_precision := 'Millenia';
+			else
+				p_precision := 'Millenium';
+			end if;
+		elsif v_date_string like '%C' then
+			v_date_string := replace(v_date_string, 'C');
+			p_date := to_date(to_char((to_number(v_date_string) * 100) - 100) || '-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
+			if v_has_question_mark then
+				p_precision := 'Centuries';
+			else
+				p_precision := 'Century';
+			end if;
+		elsif v_date_string like '%s' then
+			v_date_string := replace(v_date_string, 's');
+			p_date := to_date(to_char(to_number(v_date_string)) || '-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
+			if v_has_question_mark then
+				p_precision := 'Decades';
+			else
+				p_precision := 'Decade';
+			end if;
+/*
+		elsif regexp_like(v_date_string, '^[0-9][0-9][0-9]$') then
+			p_date := to_date(to_char(to_number(v_date_string)) || '-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
+			if v_has_question_mark then
+				p_precision := 'Years';
+			else
+				p_precision := 'Year';
+			end if;
+*/
+		elsif length(v_date_string) = 4 then
+			v_date_string := replace(v_date_string, 's');
+			p_date := to_date(to_char(to_number(v_date_string)) || '-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
+			if v_has_question_mark then
+				p_precision := 'Years';
+			else
+				p_precision := 'Year';
+			end if;
+		elsif v_date_string like '%Q%' then
+			if v_date_string like '%Q1' then
+				p_date := to_date(to_char(to_number(substr(v_date_string, 1, 4))) || '-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
+			elsif v_date_string like '%Q2' then
+				p_date := to_date(to_char(to_number(substr(v_date_string, 1, 4))) || '-04-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
+			elsif v_date_string like '%Q3' then
+				p_date := to_date(to_char(to_number(substr(v_date_string, 1, 4))) || '-07-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
+			elsif v_date_string like '%Q4' then
+				p_date := to_date(to_char(to_number(substr(v_date_string, 1, 4))) || '-10-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
+			end if;
+			if v_has_question_mark then
+				p_precision := 'Quarters';
+			else
+				p_precision := 'Quarter';
+			end if;
+		elsif length(v_date_string) = 8 then
+			p_date := to_date(v_date_string || ' 01 00:00:00', 'YYYY Mon DD HH24:MI:SS');
+			if v_has_question_mark then
+				p_precision := 'Months';
+			else
+				p_precision := 'Month';
+			end if;
+		elsif length(v_date_string) in (10, 11) and v_date_string not like '%.%' then
+			p_date := to_date(v_date_string || ' 00:00:00', 'YYYY Mon DD HH24:MI:SS');
+			if v_has_question_mark then
+				p_precision := 'Days';
+			else
+				p_precision := 'Day';
+			end if;
+		elsif v_date_string like '%h%' then
+			v_date_string := replace(v_date_string, 'h');
+			p_date := to_date(v_date_string || ':00:00', 'YYYY Mon DD HH24:MI:SS');
+			if v_has_question_mark then
+				p_precision := 'Hours';
+			else
+				p_precision := 'Hour';
+			end if;
+		elsif length(v_date_string) = 13 then
+			p_date :=
+				to_date(substr(v_date_string, 1, length(v_date_string)-2) || ' 00:00:00', 'YYYY Mon DD HH24:MI:SS')
+				+ numToDSInterval(1440 * to_number(substr(v_date_string, -2, 2)), 'MINUTE');
+			if v_has_question_mark then
+				p_precision := 'Hours';
+			else
+				p_precision := 'Hour';
+			end if;
+		elsif length(v_date_string) = 14 then
+			p_date :=
+				to_date(substr(v_date_string, 1, length(v_date_string)-3) || ' 00:00:00', 'YYYY Mon DD HH24:MI:SS')
+				+ numToDSInterval(24*60*60 * to_number(substr(v_date_string, -3, 3)), 'SECOND');
+			if v_has_question_mark then
+				p_precision := 'Centidays';
+			else
+				p_precision := 'Centiday';
+			end if;
+		elsif length(v_date_string) = 16 then
+			p_date := to_date(v_date_string || ':00', 'YYYY Mon DD HH24:MI:SS');
+			if v_has_question_mark then
+				p_precision := 'Minutes';
+			else
+				p_precision := 'Minute';
+			end if;
+		elsif length(v_date_string) = 19 then
+			v_date_string := replace(v_date_string, 'h');
+			p_date := to_date(v_date_string, 'YYYY Mon DD HH24:MI:SS');
+			if v_has_question_mark then
+				p_precision := 'Seconds';
+			else
+				p_precision := 'Second';
+			end if;
+		--Note: Millisecond not yet implemented - may require conversion to timestamp.
+		else
+			raise_application_error(-20000, 'Unexpected vague date format: ' || p_date_string);
+		end if;
+	exception when others then
+		raise_application_error(-20000, 'Vague date format error with this date string: ' || p_date_string || chr(10) || sqlerrm);
+	end vague_date_and_precision;
+
+
+	---------------------------------------
+	-- Purpose: Safely convert the vague date format into an Oracle date.
+	function vague_to_date(p_date_string in varchar2) return date is
+		v_date      date;
+		v_precision varchar2(4000);
+	begin
+		vague_date_and_precision(p_date_string, v_date, v_precision);
+		return v_date;
+	end vague_to_date;
+
+
+	---------------------------------------
+	-- Purpose: Safely get the precision from a vague date.
+	function vague_to_precision(p_date_string in varchar2) return varchar2 is
+		v_date      date;
+		v_precision varchar2(4000);
+	begin
+		vague_date_and_precision(p_date_string, v_date, v_precision);
+		return v_precision;
+	end vague_to_precision;
+
+
+	---------------------------------------
+	-- Purpose: Convert a file to a BLOB so it can be used by APEX_DATA_PARSER.
+	-- Based on https://oracle-base.com/articles/misc/apex_data_parser
+	function file_to_blob (p_dir in varchar2, p_filename in varchar2) return blob
+	as
+		l_bfile  bfile;
+		l_blob   blob;
+		l_dest_offset integer := 1;
+		l_src_offset  integer := 1;
+	begin
+		l_bfile := bfilename(p_dir, p_filename);
+		dbms_lob.fileopen(l_bfile, dbms_lob.file_readonly);
+		dbms_lob.createtemporary(l_blob, false);
+		if dbms_lob.getlength(l_bfile) > 0 then
+		dbms_lob.loadblobfromfile (
+			dest_lob    => l_blob,
+			src_bfile   => l_bfile,
+			amount      => dbms_lob.lobmaxsize,
+			dest_offset => l_dest_offset,
+			src_offset  => l_src_offset);
+		end if;
+		dbms_lob.fileclose(l_bfile);
+		return l_blob;
+	end file_to_blob;
+
+
+	-- Purpose: Split a list of strings into a nested table of string.
+	function get_nt_from_list
+	(
+		p_list in varchar2,
+		p_delimiter in varchar2
+	) return sys.odcivarchar2list is
+		v_index number := 0;
+		v_item varchar2(32767);
+		v_results sys.odcivarchar2list := sys.odcivarchar2list();
+	begin
+		--Split.
+		loop
+			v_index := v_index + 1;
+			v_item := regexp_substr(p_list, '[^' || p_delimiter || ']+', 1, v_index);
+			exit when v_item is null;
+			v_results.extend;
+			v_results(v_results.count) := v_item;
+		end loop;
+
+		return v_results;
+	end get_nt_from_list;
+
+
+	---------------------------------------
+	-- Purpose: Convert numbers.
+	function gcat_to_number(p_number_string varchar2) return number is
+	begin
+		if p_number_string = '-' then
+			return null;
+		end if;
+
+		return to_char(p_number_string);
+	exception when others then
+		raise_application_error(-20000, 'Error converting this string to a number: ' || p_number_string || chr(10) || sqlerrm);
+	end gcat_to_number;
+
+end gcat_helper;
+/
+
+
+
+
+--------------------------------------------------------------------------------
+-- Test helper functions - one time step
+--------------------------------------------------------------------------------
+
+
+declare
+	v_date_string varchar2(100);
+	v_date date;
+	v_precision varchar2(100);
+begin
+	--Values straight from the GCAT doc, for reference:
+	/*
+	Precision  Vague Date              Range implied (semiopen interval)    Width
+	Millisec   2016 Jun  8 2355:57.345  2016 Jun 8 2355:57.345 to 57.346     1ms
+	Second     2016 Jun  8 2355:57      2016 Jun 8 2355:57.0 to 2355:58.0    1s
+	Seconds    2016 Jun  8 2355:57?     2016 Jun 8 2355:56.0 to 2355:59.0    3s
+	Minute     2016 Jun  8 2355         2016 Jun 8 2355:00 to 2356:00        1m
+	Minutes    2016 Jun  8 2355?        2016 Jun 8 2354:00 to 2357:00        3m
+	Centiday   2016 Jun  8.98           2016 Jun 8 2331:48 to Jun 8 2345:54  0.01d
+	Centidays  2016 Jun  8.98?          2016 Jun 8 2316:48 to Jun 9 0000:00  0.03d
+	Hour       2016 Jun  8 23h          2016 Jun 8 2300:00 to Jun 9 0000:00  1h
+	Hours      2016 Jun  8.9            2016 Jun 8 2136:00 to Jun 9 0000:00  2.4h
+	Day        2016 Jun  8              2016 Jun 8 0000 to 2016 Jun 9 0000   1d
+	Days       2016 Jun  8?             2016 Jun 7 0000 to 2016 Jun 10 0000  3d
+	Month      2016 Jun                 2016 Jun 1 0000 to 2016 Jul 1 0000   1mo
+	Months     2016 Jun?                2016 May 1 0000 to 2016 Aug 1 0000   3mo
+	Quarter    2016 Q2                  2016 Apr 1 0000 to 2016 Jul 1 0000   3mo
+	Quarters   2016 Q2?                 2016 Jan 1 0000 to 2016 Oct 1 0000   9mo
+	Year       2016                     2016 Jan 1 0000 to 2017 Jan 1 0000   1y
+	Years      2016?                    2015 Jan 1 0000 to 2018 Jan 1 0000   3y
+	Decade     2010s                    2010 Jan 1 0000 to 2020 Jan 1 0000   10y
+	Decades    2010s?                   2000 Jan 1 0000 to 2030 Jan 1 0000   30y
+	Century    21C                      2001 Jan 1 0000 to 2101 Jan 1 0000   100y
+	Centuries  21C?                     1901 Jan 1 0000 to 2201 Jan 1 0000   300y
+	Millenium  3M                       2001 Jan 1 0000 to 3001 Jan 1 0000   1000y
+	Millenia   3M?                      1001 Jan 1 0000 to 4001 Jan 1 0000   3000y
+	*/
+
+	--These dates are mostly from the PDF document, with a few extra values for my own testing.
+	--Millisecond not yet implemented.
+	--v_date_string := trim('2016 Jun  8 2355:57.345'); vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8 2355:57    '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8 2355:57?   '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8 2355       '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8 2355?      '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8.98         '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8.98?        '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8 23h        '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8 23h?       '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8.9          '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8.9?         '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun 10.5          '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun 11.5?         '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8            '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8?           '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun 30            '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun 30?           '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun               '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun?              '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Q2                '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Q2?               '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016                   '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016?                  '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2010s                  '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('2010s?                 '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('21C                    '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('21C?                   '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('3M                     '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('3M?                    '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	--Some weird dates from the ORGS file.
+	v_date_string := trim('700?                   '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('927 Jul 12             '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('?                      '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('                       '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('-                      '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+	v_date_string := trim('*                      '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
+
 end;
 /
 
 
 
 
-
-
-
 --------------------------------------------------------------------------------
--- Create configuration view based on expected headers and how to handle them.
+-- Create configuration view based on expected headers and how to handle them - one time step.
 --------------------------------------------------------------------------------
 
 create or replace view gcat_config_vw as
 select 'launch.tsv'  file_name, 'LAUNCH_STAGING'  staging_table_name, 73426 min_expected_rows, '#Launch_Tag	Launch_JD	Launch_Date	LV_Type	Variant	Flight_ID	Flight	Mission	FlightCode	Platform	Launch_Site	Launch_Pad	Ascent_Site	Ascent_Pad	Apogee	Apoflag	Range	RangeFlag	Dest	Agency	Launch_Code	Group	Category	LTCite	Cite	Notes' first_line from dual union all
-select 'engines.tsv' file_name, 'ENGINES_STAGING' staging_table_name, 1347  min_expected_rows, '#Name	Manufacturer	Family	Alt_Name	Oxidizer	Fuel	Mass	MFlag	Impulse	ImpFlag	Thrust	TFlag	Isp	IspFlag	Duration	DurFlag	Chambers	Date	Usage	Group' from dual
+select 'engines.tsv' file_name, 'ENGINES_STAGING' staging_table_name, 1347  min_expected_rows, '#Name	Manufacturer	Family	Alt_Name	Oxidizer	Fuel	Mass	MFlag	Impulse	ImpFlag	Thrust	TFlag	Isp	IspFlag	Duration	DurFlag	Chambers	Date	Usage	Group' from dual union all
+select 'orgs.tsv'    file_name, 'ORGS_STAGING'    staging_table_name, 3270  min_expected_rows, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual
 order by file_name;
 
 
 
-
-
-
-
 --------------------------------------------------------------------------------
--- Create job to download files
+-- Create job to download files - one time step.
 -- MUST RUN THIS AS SYS.
 --------------------------------------------------------------------------------
 
@@ -268,7 +568,7 @@ begin
 		select file_name
 		from gcat_config_vw
 		--TEMP for TESTING - only use one file.
-		where file_name = 'engines.tsv'
+		where file_name = 'orgs.tsv'
 		order by file_name
 	) loop
 		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 1, argument_value => '--output');
@@ -295,10 +595,10 @@ declare
 		select line
 		from external
 		(
-			(line clob)
+			(line varchar2(4000))
 			type oracle_loader
 			default directory data_pump_dir
-			access parameters (records delimited by "\n")
+			access parameters (records delimited by "\n" characterset al32utf8)
 			location ('#FILE_NAME#')
 		)
 		where rownum = 1
@@ -346,7 +646,7 @@ declare
 		(
 			apex_data_parser.parse
 			(
-				p_content   => file_to_blob('DATA_PUMP_DIR', '#FILE_NAME#'),
+				p_content   => gcat_helper.file_to_blob('DATA_PUMP_DIR', '#FILE_NAME#'),
 				p_file_name => '#FILE_NAME#'
 			)
 		)
@@ -398,7 +698,7 @@ begin
 					column_value,
 					row_number() over (partition by file_name order by rownum) rownumber
 				from gcat_config_vw
-				cross join table(get_nt_from_list(p_delimiter => '	', p_list => first_line))
+				cross join table(gcat_helper.get_nt_from_list(p_delimiter => '	', p_list => first_line))
 			)
 		)
 		group by file_name, staging_table_name
@@ -452,23 +752,30 @@ end;
 -- Drop the presentation tables.
 --------------------------------------------------------------------------------
 
+select * from orgs_staging;
+
 
 declare
-	v_table_does_not_exist exception;
-	pragma exception_init(v_table_does_not_exist, -942);
+
+	procedure drop_if_exists(p_object_name varchar2, p_object_type varchar2) is
+		v_table_view_does_not_exist exception;
+		pragma exception_init(v_table_view_does_not_exist, -942);
+	begin
+		execute immediate 'drop '||p_object_type||' '||p_object_name;
+	exception when v_table_view_does_not_exist then
+		null;
+	when others then
+		raise_application_error(-20000, 'Error with this object: '||p_object_name||chr(10)||
+			sys.dbms_utility.format_error_stack||sys.dbms_utility.format_error_backtrace);
+	end drop_if_exists;
+
 begin
-	for tables in
-	(
-		select 'drop table ' || column_value v_sql
-		from table(sys.odcivarchar2list('ENGINE_PROPELLANT', 'PROPELLANT'))
-	) loop
-		begin
-			execute immediate tables.v_sql;
-		exception when v_table_does_not_exist then null;
-		end;
+	for i in reverse 1 .. gcat_helper.c_ordered_objects.count loop
+		drop_if_exists(gcat_helper.c_ordered_objects(i), 'table');
 	end loop;
 end;
 /
+
 
 
 
@@ -477,8 +784,193 @@ end;
 --------------------------------------------------------------------------------
 
 
---PROPELLANT
-create table propellant compress as
+--ORGANIZATION:
+create table organization compress as
+select o_code, o_ucode, o_state_code, o_type, o_class,
+	gcat_helper.vague_to_date(o_tstart) o_tstart,
+	gcat_helper.vague_to_precision(o_tstart) o_tstart_precision,
+	gcat_helper.vague_to_date(o_tstop) o_tstop,
+	gcat_helper.vague_to_precision(o_tstop) o_tstop_precision,
+	o_short_name,
+	o_name,
+	o_location,
+	gcat_helper.gcat_to_number(o_longitude) o_longitude,
+	gcat_helper.gcat_to_number(o_latitude) o_latitude,
+	gcat_helper.gcat_to_number(o_error) o_error,
+	o_parent,
+	o_short_ename,
+	o_ename,
+	o_uname
+from
+(
+	--Fix data issues.
+	select
+		o_code,o_ucode,o_state_code,o_type,o_class,o_tstart,
+		replace(o_tstop, '2015 Feb ?', '2015 Feb?') o_tstop,
+		o_short_name,o_name,o_location,
+		o_longitude,o_latitude,o_error,o_parent,o_short_ename,o_ename,o_uname
+	from
+	(
+		--Rename columns.
+		select
+			"Code"       o_code,
+			"UCode"      o_ucode,
+			"StateCode"  o_state_code,
+			"Type"       o_type,
+			"Class"      o_class,
+			"TStart"     o_tstart,
+			"TStop"      o_tstop,
+			"ShortName"  o_short_name,
+			"Name"       o_name,
+			"Location"   o_location,
+			"Longitude"  o_longitude,
+			"Latitude"   o_latitude,
+			"Error"      o_error,
+			"Parent"     o_parent,
+			"ShortEName" o_short_ename,
+			"EName"      o_ename,
+			"UName"      o_uname
+		from orgs_staging
+	) rename_columns
+) fix_data;
+
+
+select * from organization;
+
+--Automatically shrink columns as much as possible.
+declare
+	p_table_name varchar2(128) := upper('ORGANIZATION');
+	v_max_size number;
+begin
+	--Create a SQL statement to find the max size for each column
+	for varchar2_columns in
+	(
+		select
+			'select max(lengthb('||column_name||')) from '||table_name v_select,
+			'alter table '||table_name||' modify '||column_name||' varchar2(?)' v_alter
+		from user_tab_columns
+		where table_name = p_table_name
+			and data_type = 'VARCHAR2'
+		order by 1
+	) loop
+		execute immediate varchar2_columns.v_select into v_max_size;
+		execute immediate replace(varchar2_columns.v_alter, '?', v_max_size);
+	end loop;
+end;
+/
+
+select *
+from user_tab_columns
+where table_name = 'ORGANIZATION';
+
+;
+
+
+
+
+
+
+
+--What's the primary key?
+select * from orgs_staging;
+select * from orgs_staging;
+
+
+--How do I automatically find the longest column?
+
+
+
+
+--Check date functions:
+select "TStart", gcat_helper.vague_to_date(replace("TStart", '-'))
+from orgs_staging;
+
+select distinct "Launch_Date", gcat_helper.vague_to_date(replace(replace(replace(replace(replace(replace("Launch_Date", '-'), '1963 Jun   5', '1963 Jun  5'), '1963 Jun  25', '1963 Jun 25'), '1963 Jun  26', '1963 Jun 26'), '1971 Mar 24 1832:0', '1971 Mar 24 1832:00'), '1971 Jul 31 2334:0', '1971 Jul 31 2334:00asdf'))
+from launch_staging;
+
+
+ORA-20000: Unexpected vague date format: 
+ORA-06512: at "JHELLER.GCAT_HELPER", line 146
+ORA-06512: at "JHELLER.GCAT_HELPER", line 157
+
+View program sources of error stack?
+
+
+ORA-20000: Unexpected vague date format: 1971 Mar 24 1832:0
+ORA-06512: at "JHELLER.GCAT_HELPER", line 146
+ORA-06512: at "JHELLER.GCAT_HELPER", line 157
+
+View program sources of error stack?
+
+
+ORA-20000: Unexpected vague date format: 1963 Jun  26
+ORA-06512: at "JHELLER.GCAT_HELPER", line 146
+ORA-06512: at "JHELLER.GCAT_HELPER", line 157
+
+View program sources of error stack?
+
+ORA-20000: Unexpected vague date format: 1963 Jun   5
+ORA-06512: at "JHELLER.GCAT_HELPER", line 146
+ORA-06512: at "JHELLER.GCAT_HELPER", line 157
+
+View program sources of error stack?
+;
+ORA-20000: Unexpected vague date format: 1963 Jun  25
+ORA-06512: at "JHELLER.GCAT_HELPER", line 146
+ORA-06512: at "JHELLER.GCAT_HELPER", line 157
+
+View program sources of error stack?
+
+
+
+select *
+from orgs_staging
+order by "TStart"
+;
+
+
+
+
+--Code is the primary key.
+select "Code", count(*) from orgs_staging group by "Code" having count(*) > 1;
+
+
+
+
+select distinct "Parent" from orgs_staging where "Parent" like '%/%';
+
+select * from space.organization;
+
+
+
+
+select * from engines_staging;
+
+
+select * from engines_staging;
+
+
+
+select * from space.engine_propellant;
+
+drop table engine_propellant;
+drop table propellant;
+
+
+select * from propellant order by p_name;
+select propellant_name from space.propellant order by propellant_name;
+
+
+
+
+
+--PROPELLANT:
+create table propellant
+(
+	p_name,
+	constraint pk_propellant primary key (p_name)
+)
+compress as
 select propellant_name p_name
 from
 (
@@ -509,34 +1001,13 @@ from
 			where "Fuel" <> '-'
 		)
 	)
-	cross join get_nt_from_list(propellant_list, '/')
+	cross join gcat_helper.get_nt_from_list(propellant_list, '/')
 )
 order by p_name;
 
-alter table propellant add constraint propellant_pk primary key (p_name);
 
 
 
-
-
-
-
-
-select * from engines_staging;
-
-
-/*
-
-*/
-
-select * from space.engine_propellant;
-
-drop table engine_propellant;
-drop table propellant;
-
-
-select * from propellant order by p_name;
-select propellant_name from space.propellant order by propellant_name;
 
 
 
