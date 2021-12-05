@@ -85,7 +85,7 @@ Packages:
 Column names:
 	Column names have a unique prefix plus the rest of the name based on the GCAT name. The prefix helps in complicated SQL statements where multiple tables have similar column names.
 	Names that are normal words are separated by an underscore. For example, "ShortName" becomes short_name, but "EName" stays as ename.
-
+	Names that reference other columns have that column in the name. For example, the "Parent" column in ORGANIZATION is named "O_PARENT_O_CODE", to make it obvious which column it references.
 
 Tables:
 	* means done.
@@ -99,7 +99,9 @@ SATELLITE
 	SATELLITE_ORG
 
 ORGANIZATION
+	ORGANIZATION_CLASS
 	ORGANIZATION_ORG_TYPE
+		ORGANIZATION_TYPE
 
 PLATFORM
 
@@ -122,7 +124,8 @@ ENGINE
 LAUNCH_VEHICLE_STAGE
 ;
 
-
+select * from space.organization_org_type;
+select * from organization;
 
 
 --------------------------------------------------------------------------------
@@ -137,6 +140,8 @@ create or replace package gcat_helper authid current_user is
 	--Use the reverse order to drop them.
 	c_ordered_objects constant sys.odcivarchar2list := sys.odcivarchar2list
 	(
+		'ORGANIZATION_CLASS',
+		'ORGANIZATION_TYPE',
 		'ORGANIZATION',
 		'PLATFORM',
 		'ORGANIZATION_ORG_TYPE',
@@ -165,6 +170,7 @@ create or replace package gcat_helper authid current_user is
 	function vague_to_date(p_date_string in varchar2) return date;
 	function vague_to_precision(p_date_string in varchar2) return varchar2;
 	function gcat_to_number(p_number_string varchar2) return number;
+	function convert_null(p_string in varchar2) return varchar2;
 end gcat_helper;
 /
 
@@ -403,6 +409,18 @@ create or replace package body gcat_helper is
 	exception when others then
 		raise_application_error(-20000, 'Error converting this string to a number: ' || p_number_string || chr(10) || sqlerrm);
 	end gcat_to_number;
+
+
+	---------------------------------------
+	-- Purpose: Convert a GCAT NULL, a dash, to a database NULL.
+	function convert_null(p_string in varchar2) return varchar2 is
+	begin
+		if p_string = '-' then
+			return null;
+		else
+			return p_string;
+		end if;
+	end convert_null;
 
 end gcat_helper;
 /
@@ -752,9 +770,6 @@ end;
 -- Drop the presentation tables.
 --------------------------------------------------------------------------------
 
-select * from orgs_staging;
-
-
 declare
 
 	procedure drop_if_exists(p_object_name varchar2, p_object_type varchar2) is
@@ -783,10 +798,48 @@ end;
 -- Load the real tables
 --------------------------------------------------------------------------------
 
+--ORGANIZATION_CLASS:
+create table organization_class compress as
+select cast(oc_code as varchar2(1)) oc_code, oc_description
+from
+(
+	select 'A' oc_code, 'Academic, amateur and non-profit' oc_description from dual union all
+	select 'B' oc_code, 'Business/commercial'              oc_description from dual union all
+	select 'C' oc_code, 'Civil government'                 oc_description from dual union all
+	select 'D' oc_code, 'Defense/military/intelligence'    oc_description from dual union all
+	--Fix: "E" and "O" are not in https://planet4589.org/space/gcat/web/orgs/index.html
+	select 'E' oc_code, 'Engine/motor manufacturer'        oc_description from dual union all
+	select 'O' oc_code, 'Other'                            oc_description from dual
+);
+
+alter table organization_class add constraint pk_organization_class primary key(oc_code);
+
+
+--ORGANIZATION_TYPE:
+create table organization_type compress as
+select 'CY'  ot_code, 'Country (i.e. nation-state or autonomous region)'                                                                                              ot_description, 'States and similar entities' ot_group from dual union all
+select 'IGO' ot_code, 'Intergovernmental organization. Treated as equivalent to a country for the purposes of tabulations of launches by country etc.'                ot_description, 'States and similar entities' ot_group from dual union all 
+select 'AP'  ot_code, 'Astronomical Polity: e.g. Luna, Mars. Used for the ''country'' field for locations that are not on Earth and therefore don''t have a country.' ot_description, 'States and similar entities' ot_group from dual union all
+select 'E'   ot_code, 'Engine manufacturer'                                                                                                                           ot_description, 'Manufacturers'               ot_group from dual union all
+select 'LV'  ot_code, 'Launch vehicle manufacturer'                                                                                                                   ot_description, 'Manufacturers'               ot_group from dual union all
+select 'W'   ot_code, 'Meteorological rocket launch agency or manufacturer'                                                                                           ot_description, 'Manufacturers'               ot_group from dual union all
+select 'PL'  ot_code, 'Payload manufacturer'                                                                                                                          ot_description, 'Manufacturers'               ot_group from dual union all
+select 'LA'  ot_code, 'Launch Agency'                                                                                                                                 ot_description, 'Operators'                    ot_group from dual union all
+select 'S'   ot_code, 'Suborbital payload operator'                                                                                                                   ot_description, 'Operators'                    ot_group from dual union all
+select 'O'   ot_code, 'Payload owner'                                                                                                                                 ot_description, 'Operators'                    ot_group from dual union all
+select 'P'   ot_code, 'Parent organization of another entry'                                                                                                          ot_description, 'Operators'                    ot_group from dual union all
+select 'LS'  ot_code, 'Launch site'                                                                                                                                   ot_description, 'Launch origin or destination' ot_group from dual union all
+select 'LP'  ot_code, 'Launch position'                                                                                                                               ot_description, 'Launch origin or destination' ot_group from dual union all
+select 'LC'  ot_code, 'Launch cruise'                                                                                                                                 ot_description, 'Launch origin or destination' ot_group from dual union all
+select 'LZ'  ot_code, 'Launch zone'                                                                                                                                   ot_description, 'Launch origin or destination' ot_group from dual union all
+select 'TGT' ot_code, 'Suborbital target area'                                                                                                                        ot_description, 'Launch origin or destination' ot_group from dual;
+
+alter table organization_type add constraint pk_organization_type primary key (ot_code);
+
 
 --ORGANIZATION:
 create table organization compress as
-select o_code, o_ucode, o_state_code, o_type, o_class,
+select o_code, o_ucode, o_state_code, o_type, o_oc_code,
 	gcat_helper.vague_to_date(o_tstart) o_tstart,
 	gcat_helper.vague_to_precision(o_tstart) o_tstart_precision,
 	gcat_helper.vague_to_date(o_tstop) o_tstop,
@@ -797,7 +850,7 @@ select o_code, o_ucode, o_state_code, o_type, o_class,
 	gcat_helper.gcat_to_number(o_longitude) o_longitude,
 	gcat_helper.gcat_to_number(o_latitude) o_latitude,
 	gcat_helper.gcat_to_number(o_error) o_error,
-	o_parent,
+	o_parent_o_code,
 	o_short_ename,
 	o_ename,
 	o_uname
@@ -805,79 +858,68 @@ from
 (
 	--Fix data issues.
 	select
-		o_code,o_ucode,o_state_code,o_type,o_class,o_tstart,
+		o_code,
+		o_ucode,
+		o_state_code,
+		o_type,
+		o_oc_code,
+		o_tstart,
 		replace(o_tstop, '2015 Feb ?', '2015 Feb?') o_tstop,
-		o_short_name,o_name,o_location,
-		o_longitude,o_latitude,o_error,o_parent,o_short_ename,o_ename,o_uname
+		o_short_name,
+		o_name,
+		o_location,
+		o_longitude,
+		o_latitude,
+		o_error,
+		--Fix: Convert multi-parent values into single-parent (the biggest parent).
+		case
+			when o_parent = 'MOTI/TMI' then 'MOTI'
+			when o_parent = 'HISD/LOR' then 'LOR'
+			else o_parent
+		end o_parent_o_code,
+		o_short_ename,
+		o_ename,
+		o_uname
 	from
 	(
 		--Rename columns.
 		select
-			"Code"       o_code,
-			"UCode"      o_ucode,
-			"StateCode"  o_state_code,
-			"Type"       o_type,
-			"Class"      o_class,
-			"TStart"     o_tstart,
-			"TStop"      o_tstop,
-			"ShortName"  o_short_name,
-			"Name"       o_name,
-			"Location"   o_location,
-			"Longitude"  o_longitude,
-			"Latitude"   o_latitude,
-			"Error"      o_error,
-			"Parent"     o_parent,
-			"ShortEName" o_short_ename,
-			"EName"      o_ename,
-			"UName"      o_uname
+			gcat_helper.convert_null("Code"      ) o_code,
+			gcat_helper.convert_null("UCode"     ) o_ucode,
+			gcat_helper.convert_null("StateCode" ) o_state_code,
+			gcat_helper.convert_null("Type"      ) o_type,
+			gcat_helper.convert_null("Class"     ) o_oc_code,
+			gcat_helper.convert_null("TStart"    ) o_tstart,
+			gcat_helper.convert_null("TStop"     ) o_tstop,
+			gcat_helper.convert_null("ShortName" ) o_short_name,
+			gcat_helper.convert_null("Name"      ) o_name,
+			gcat_helper.convert_null("Location"  ) o_location,
+			gcat_helper.convert_null("Longitude" ) o_longitude,
+			gcat_helper.convert_null("Latitude"  ) o_latitude,
+			gcat_helper.convert_null("Error"     ) o_error,
+			gcat_helper.convert_null("Parent"    ) o_parent,
+			gcat_helper.convert_null("ShortEName") o_short_ename,
+			gcat_helper.convert_null("EName"     ) o_ename,
+			gcat_helper.convert_null("UName"     ) o_uname
 		from orgs_staging
 	) rename_columns
 ) fix_data;
 
+alter table organization add constraint pk_organization primary key(o_code);
+alter table organization add constraint fk_organization_organization foreign key (o_parent_o_code) references organization(o_code);
+alter table organization add constraint fk_organization_organization_class foreign key (o_oc_code) references organization_class(oc_code);
+
+
+--ORGANIZATION_ORG_TYPE
 
 select * from organization;
+select * from space.organization_org_type;
 
---Automatically shrink columns as much as possible.
-declare
-	p_table_name varchar2(128) := upper('ORGANIZATION');
-	v_max_size number;
-begin
-	--Create a SQL statement to find the max size for each column
-	for varchar2_columns in
-	(
-		select
-			'select max(lengthb('||column_name||')) from '||table_name v_select,
-			'alter table '||table_name||' modify '||column_name||' varchar2(?)' v_alter
-		from user_tab_columns
-		where table_name = p_table_name
-			and data_type = 'VARCHAR2'
-		order by 1
-	) loop
-		execute immediate varchar2_columns.v_select into v_max_size;
-		execute immediate replace(varchar2_columns.v_alter, '?', v_max_size);
-	end loop;
-end;
-/
-
-select *
-from user_tab_columns
-where table_name = 'ORGANIZATION';
-
-;
+o_code, ot_code;
 
 
-
-
-
-
-
---What's the primary key?
-select * from orgs_staging;
-select * from orgs_staging;
-
-
---How do I automatically find the longest column?
-
+select "Code", "Type"
+from orgs_staging;
 
 
 
@@ -887,48 +929,6 @@ from orgs_staging;
 
 select distinct "Launch_Date", gcat_helper.vague_to_date(replace(replace(replace(replace(replace(replace("Launch_Date", '-'), '1963 Jun   5', '1963 Jun  5'), '1963 Jun  25', '1963 Jun 25'), '1963 Jun  26', '1963 Jun 26'), '1971 Mar 24 1832:0', '1971 Mar 24 1832:00'), '1971 Jul 31 2334:0', '1971 Jul 31 2334:00asdf'))
 from launch_staging;
-
-
-ORA-20000: Unexpected vague date format: 
-ORA-06512: at "JHELLER.GCAT_HELPER", line 146
-ORA-06512: at "JHELLER.GCAT_HELPER", line 157
-
-View program sources of error stack?
-
-
-ORA-20000: Unexpected vague date format: 1971 Mar 24 1832:0
-ORA-06512: at "JHELLER.GCAT_HELPER", line 146
-ORA-06512: at "JHELLER.GCAT_HELPER", line 157
-
-View program sources of error stack?
-
-
-ORA-20000: Unexpected vague date format: 1963 Jun  26
-ORA-06512: at "JHELLER.GCAT_HELPER", line 146
-ORA-06512: at "JHELLER.GCAT_HELPER", line 157
-
-View program sources of error stack?
-
-ORA-20000: Unexpected vague date format: 1963 Jun   5
-ORA-06512: at "JHELLER.GCAT_HELPER", line 146
-ORA-06512: at "JHELLER.GCAT_HELPER", line 157
-
-View program sources of error stack?
-;
-ORA-20000: Unexpected vague date format: 1963 Jun  25
-ORA-06512: at "JHELLER.GCAT_HELPER", line 146
-ORA-06512: at "JHELLER.GCAT_HELPER", line 157
-
-View program sources of error stack?
-
-
-
-select *
-from orgs_staging
-order by "TStart"
-;
-
-
 
 
 --Code is the primary key.
@@ -1018,6 +1018,45 @@ order by p_name;
 
 
 
+
+
+
+
+
+
+
+
+
+--------------------------------------------------------------------------------
+-- Shrink columns.
+--------------------------------------------------------------------------------
+
+
+--Automatically shrink column size as much as possible.
+--(This doesn't save space, but can help with applications that use the max data size for presentation.)
+declare
+	p_table_name varchar2(128) := upper('ORGANIZATION');
+	v_max_size number;
+begin
+	--Alter each table.
+	for i in 1 .. gcat_helper.c_ordered_objects.count loop
+		--Alter each column in the table.
+		for varchar2_columns in
+		(
+			select
+				'select max(lengthb('||column_name||')) from '||table_name v_select,
+				'alter table '||table_name||' modify '||column_name||' varchar2(?)' v_alter
+			from user_tab_columns
+			where table_name = gcat_helper.c_ordered_objects(i)
+				and data_type = 'VARCHAR2'
+			order by 1
+		) loop
+			execute immediate varchar2_columns.v_select into v_max_size;
+			execute immediate replace(varchar2_columns.v_alter, '?', v_max_size);
+		end loop;
+	end loop;
+end;
+/
 
 
 
