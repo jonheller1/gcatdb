@@ -98,10 +98,10 @@ LAUNCH
 SATELLITE
 	SATELLITE_ORG
 
-ORGANIZATION
-	ORGANIZATION_CLASS
-	ORGANIZATION_ORG_TYPE
-		ORGANIZATION_TYPE
+* ORGANIZATION
+*	ORGANIZATION_CLASS
+*	ORGANIZATION_ORG_TYPE
+*		ORGANIZATION_TYPE
 
 PLATFORM
 
@@ -516,9 +516,10 @@ end;
 --------------------------------------------------------------------------------
 
 create or replace view gcat_config_vw as
-select 'launch.tsv'  file_name, 'LAUNCH_STAGING'  staging_table_name, 73426 min_expected_rows, '#Launch_Tag	Launch_JD	Launch_Date	LV_Type	Variant	Flight_ID	Flight	Mission	FlightCode	Platform	Launch_Site	Launch_Pad	Ascent_Site	Ascent_Pad	Apogee	Apoflag	Range	RangeFlag	Dest	Agency	Launch_Code	Group	Category	LTCite	Cite	Notes' first_line from dual union all
-select 'engines.tsv' file_name, 'ENGINES_STAGING' staging_table_name, 1347  min_expected_rows, '#Name	Manufacturer	Family	Alt_Name	Oxidizer	Fuel	Mass	MFlag	Impulse	ImpFlag	Thrust	TFlag	Isp	IspFlag	Duration	DurFlag	Chambers	Date	Usage	Group' from dual union all
-select 'orgs.tsv'    file_name, 'ORGS_STAGING'    staging_table_name, 3270  min_expected_rows, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual
+select 'launch.tsv'    file_name, 'LAUNCH_STAGING'    staging_table_name, 73426  min_expected_rows, '#Launch_Tag	Launch_JD	Launch_Date	LV_Type	Variant	Flight_ID	Flight	Mission	FlightCode	Platform	Launch_Site	Launch_Pad	Ascent_Site	Ascent_Pad	Apogee	Apoflag	Range	RangeFlag	Dest	Agency	Launch_Code	Group	Category	LTCite	Cite	Notes' first_line from dual union all
+select 'engines.tsv'   file_name, 'ENGINES_STAGING'   staging_table_name,  1347  min_expected_rows, '#Name	Manufacturer	Family	Alt_Name	Oxidizer	Fuel	Mass	MFlag	Impulse	ImpFlag	Thrust	TFlag	Isp	IspFlag	Duration	DurFlag	Chambers	Date	Usage	Group' from dual union all
+select 'orgs.tsv'      file_name, 'ORGS_STAGING'      staging_table_name,  3270  min_expected_rows, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual union all
+select 'platforms.tsv' file_name, 'PLATFORMS_STAGING' staging_table_name,   360  min_expected_rows, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	VClass	VClassID	VID	Group	UName' from dual
 order by file_name;
 
 
@@ -586,7 +587,7 @@ begin
 		select file_name
 		from gcat_config_vw
 		--TEMP for TESTING - only use one file.
-		where file_name = 'orgs.tsv'
+		where file_name = 'platforms.tsv'
 		order by file_name
 	) loop
 		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 1, argument_value => '--output');
@@ -597,7 +598,6 @@ begin
 	end loop;
 end;
 /
-
 
 
 
@@ -798,6 +798,7 @@ end;
 -- Load the real tables
 --------------------------------------------------------------------------------
 
+
 --ORGANIZATION_CLASS:
 create table organization_class compress as
 select cast(oc_code as varchar2(1)) oc_code, oc_description
@@ -911,15 +912,103 @@ alter table organization add constraint fk_organization_organization_class forei
 
 
 --ORGANIZATION_ORG_TYPE
+create table organization_org_type compress as
+-- Shrink columns a bit to avoid this error when creating a primary key later: ORA-01450: maximum key length (6398) exceeded
+select cast("Code" as varchar2(100)) oot_o_code, column_value oot_ot_code
+from orgs_staging
+cross join gcat_helper.get_nt_from_list("Type", '/')
+where "Type" <> '-'
+order by oot_o_code;
 
-select * from organization;
-select * from space.organization_org_type;
+alter table organization_org_type add constraint pk_organization_org_type primary key(oot_o_code, oot_ot_code);
+alter table organization_org_type add constraint fk_organization_org_type_organization foreign key(oot_o_code) references organization(o_code);
+alter table organization_org_type add constraint fk_organization_org_type_organization_type foreign key(oot_ot_code) references organization_type(ot_code);
 
-o_code, ot_code;
 
+--PLATFORM
+create table platform compress as
+select p_code, p_ucode, p_state_code, p_type, p_oc_code,
+	gcat_helper.vague_to_date(p_tstart) p_tstart,
+	gcat_helper.vague_to_precision(p_tstart) p_tstart_precision,
+	gcat_helper.vague_to_date(p_tstop) p_tstop,
+	gcat_helper.vague_to_precision(p_tstop) p_tstop_precision,
+	p_short_name,
+	p_name,
+	p_location,
+	gcat_helper.gcat_to_number(p_longitude) p_longitude,
+	gcat_helper.gcat_to_number(p_latitude) p_latitude,
+	gcat_helper.gcat_to_number(p_error) p_error,
+	p_parent_o_code,
+	p_short_ename,
+	p_ename,
+	p_uname,
+	p_vclass,
+	p_vclassid,
+	p_vid,
+	p_group
+from
+(
+	--Fix data issues.
+	select
+		p_code,
+		p_ucode,
+		p_state_code,
+		p_type,
+		p_oc_code,
+		p_tstart,
+		p_tstop,
+		p_short_name,
+		p_name,
+		p_location,
+		p_longitude,
+		p_latitude,
+		p_error,
+		--Fix: Convert multi-parent values into single-parent (the biggest parent).
+		case
+			when p_parent = 'USAF/CONV' then 'USAF'
+			when p_parent = 'USN/NASA' then 'NASA'
+			else p_parent
+		end p_parent_o_code,
+		p_short_ename,
+		p_ename,
+		p_uname,
+		p_vclass,
+		p_vclassid,
+		p_vid,
+		p_group
+	from
+	(
+		--Rename columns.
+		select
+			gcat_helper.convert_null("Code"      ) p_code,
+			gcat_helper.convert_null("UCode"     ) p_ucode,
+			gcat_helper.convert_null("StateCode" ) p_state_code,
+			gcat_helper.convert_null("Type"      ) p_type,
+			gcat_helper.convert_null("Class"     ) p_oc_code,
+			gcat_helper.convert_null("TStart"    ) p_tstart,
+			gcat_helper.convert_null("TStop"     ) p_tstop,
+			gcat_helper.convert_null("ShortName" ) p_short_name,
+			gcat_helper.convert_null("Name"      ) p_name,
+			gcat_helper.convert_null("Location"  ) p_location,
+			gcat_helper.convert_null("Longitude" ) p_longitude,
+			gcat_helper.convert_null("Latitude"  ) p_latitude,
+			gcat_helper.convert_null("Error"     ) p_error,
+			gcat_helper.convert_null("Parent"    ) p_parent,
+			gcat_helper.convert_null("ShortEName") p_short_ename,
+			gcat_helper.convert_null("EName"     ) p_ename,
+			gcat_helper.convert_null("UName"     ) p_uname,
+			gcat_helper.convert_null("VClass"    ) p_vclass,
+			gcat_helper.convert_null("VClassID"  ) p_vclassid,
+			gcat_helper.convert_null("VID"       ) p_vid,
+			gcat_helper.convert_null("Group"     ) p_group
+		from platforms_staging
+	) rename_columns
+) fix_data;
 
-select "Code", "Type"
-from orgs_staging;
+alter table platform add constraint pk_platform primary key(p_code);
+alter table platform add constraint fk_platform_organization foreign key (p_parent_o_code) references organization(o_code);
+alter table platform add constraint fk_platform_organization_class foreign key (p_oc_code) references organization_class(oc_code);
+
 
 
 
