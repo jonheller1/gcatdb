@@ -73,11 +73,18 @@ Test database link:
 
 
 
+
 --------------------------------------------------------------------------------
 -- Design - one time step
 --------------------------------------------------------------------------------
 
-Packages:
+Cloud database users:
+	admin - manages data
+	gcat - owns objects and data
+	opengcat - read-only connection open to the public
+
+
+Local database packages:
 	todo:
 	gcat_helper
 	gcat_loader
@@ -1149,37 +1156,165 @@ end;
 
 
 
+
 --------------------------------------------------------------------------------
--- Old ideas
+-- Populate cloud database.
 --------------------------------------------------------------------------------
 
 
 
--- Engine types and subtypes with their rownumber ranges.
-select rownumber, nvl(lead(rownumber) over (order by rownumber), 99999999) next_rownumber, line, engine_type, engine_subtype
-from
-(
-	--Engine types and subtypes.
-	select rownumber, line
-		,regexp_substr(line, '(# )([^:]*)(: *)?(.*)?', 1, 1, 'i', 2) engine_type
-		,regexp_substr(line, '(# )([^:]*)(: *)?(.*)?', 1, 1, 'i', 4) engine_subtype
-	from
+-- Create public synonyms and grants.
+begin
+	for tables in
 	(
-		--Raw data.
-		select rownum rownumber, to_char(line) line
-		from external
-		(
-			(line clob)
-			type oracle_loader
-			default directory data_pump_dir
-			access parameters (records delimited by "\n")
-			location ('engines.tsv')
-		)
-	) raw_data
-	where rownumber > 2
-		and line like '# %'
-) engine_types_and_subtypes
+		select
+			'create or replace public synonym ' || object_name || ' for space.' || object_name v_synonym_sql,
+			'grant select on space.'||object_name||' to OPENSPACE' v_grant_sql
+		from dba_objects
+		where owner = 'SPACE'
+			and object_type not in ('INDEX')
+		order by object_name
+	) loop
+		execute immediate tables.v_synonym_sql;
+		execute immediate tables.v_grant_sql;
+	end loop;
+end;
+/
 
-;
+
+
+
+--------------------------------------------------------------------------------
+-- Recreate OCI database and public access.
+--------------------------------------------------------------------------------
+
+--Drop cloud users.
+declare
+	v_user_does_not_exist exception;
+	pragma exception_init(v_user_does_not_exist, -1918);
+	v_profile_does_not_exist exception;
+	pragma exception_init(v_profile_does_not_exist, -2380);
+begin
+	begin
+		dbms_utility.exec_ddl_statement@gcat('drop user gcat cascade');
+	exception when v_user_does_not_exist then null;
+	end;
+
+	begin
+		dbms_utility.exec_ddl_statement@gcat('drop user gcat_public cascade');
+	exception when v_user_does_not_exist then null;
+	end;
+
+	begin
+		dbms_utility.exec_ddl_statement@gcat('drop profile gcat_public_profile');
+	exception when v_profile_does_not_exist then null;
+	end;
+
+	dbms_utility.exec_ddl_statement@gcat(q'[ begin ords_admin.drop_rest_for_schema(p_schema => 'GCAT_PUBLIC'); end; ]');
+end;
+/
+
+
+--Create user to contain the data.
+begin
+	dbms_utility.exec_ddl_statement@gcat('create user gcat no authentication quota unlimited on data default tablespace data');
+end;
+/
+
+--Create a profile that won't lock or expire, and won't allow more
+--than 10 seconds of CPU per statement. (These small tables shouldn't require much time.)
+-- (It would be nice to allow simple password but ATP simply doesn't allow it.)
+begin
+	dbms_utility.exec_ddl_statement@gcat('
+		create profile gcat_public_profile limit
+		password_verify_function null
+		failed_login_attempts unlimited
+		password_life_time unlimited
+		--cpu_per_call 1000
+	');
+end;
+/
+
+--Create a public user to access GCAT data.
+--(This read-only password is public knowledge.)
+begin
+	dbms_utility.exec_ddl_statement@gcat('create user gcat_public identified by public_gcat#1A profile gcat_public_profile');
+	dbms_utility.exec_ddl_statement@gcat('grant create session to gcat_public');
+end;
+/
+
+--Prevent public user from changing the public password.
+/*
+This command:
+	alter user gcat_public identified by "someNewPW#1234" replace "public_gcat#1A";
+Will now throw this error:
+	ORA-04088: error during execution of trigger 'ADMIN.CANNOT_CHANGE_PASSWORD_TR' ORA-00604: error occurred at recursive SQL level 1 ORA-20010: you cannot change your own password. ORA-06512: at line 5
+*/
+begin
+	dbms_utility.exec_ddl_statement@gcat(
+	q'[
+		create or replace trigger cannot_change_password_tr
+		before alter
+		on database
+		declare
+		begin
+			--From: http://www.petefinnigan.com/weblog/archives/00001198.htm
+			if (ora_dict_obj_type = 'USER' and user = 'GCAT_PUBLIC') then
+				raise_application_error(-20010,'you cannot change your own password.');
+			end if;
+		end;
+	]');
+end;
+/
+
+--Enable SQL Developer Web access.
+--(To rollback: ords_admin.drop_rest_for_schema(p_schema => 'GCAT_PUBLIC');
+begin
+	dbms_utility.exec_ddl_statement@gcat(
+	q'[
+		create or replace procedure enable_rest authid current_user is
+		begin
+			execute immediate
+			q'!
+				begin
+					ords_admin.enable_schema(
+						p_enabled             => true,
+						p_schema              => 'GCAT_PUBLIC',
+						p_url_mapping_type    => 'BASE_PATH',
+						p_url_mapping_pattern => 'GCAT_PUBLIC',
+						p_auto_rest_auth      => true
+					);
+					commit;
+				end;
+			!';
+		end;
+	]');
+
+	execute immediate
+	q'[
+		begin
+			enable_rest@gcat;
+		end;
+	]';
+
+	dbms_utility.exec_ddl_statement@gcat(
+	q'[
+		drop procedure enable_rest
+	]');
+end;
+/
+
+
+--Public URL:
+--(Initial schema will be empty.)
+--https://pa6nsglmabwahpe-gcat.adb.us-ashburn-1.oraclecloudapps.com/ords/GCAT_PUBLIC/_sdw/?nav=worksheet
+
+
+
+
+--------------------------------------------------------------------------------
+-- Copy tables to the cloud.
+--------------------------------------------------------------------------------
+
 
 
