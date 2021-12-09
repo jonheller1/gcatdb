@@ -1309,12 +1309,73 @@ end;
 --(Initial schema will be empty.)
 --https://pa6nsglmabwahpe-gcat.adb.us-ashburn-1.oraclecloudapps.com/ords/GCAT_PUBLIC/_sdw/?nav=worksheet
 
-
+;
 
 
 --------------------------------------------------------------------------------
 -- Copy tables to the cloud.
 --------------------------------------------------------------------------------
 
+--TODO: Automate this for all tables.
+
+begin
+	dbms_metadata.set_transform_param (dbms_metadata.session_transform, 'SEGMENT_ATTRIBUTES', false);
+	--Why doesn't this work? This would be much better than the "REPLACE" option.
+	--dbms_metadata.set_transform_param (dbms_metadata.session_transform, 'REMAP_SCHEMA', 'JHELLER', 'GCAT');
+end;
+/
 
 
+select replace(dbms_metadata.get_ddl('TABLE', 'ORGANIZATION_CLASS') ,'"'||user||'"', '"GCAT"') from dual;
+
+
+begin
+	dbms_utility.exec_ddl_statement@gcat(
+	q'[
+  CREATE TABLE "GCAT"."ORGANIZATION_CLASS" 
+   (	"OC_CODE" VARCHAR2(1), 
+	"OC_DESCRIPTION" VARCHAR2(32), 
+	 CONSTRAINT "PK_ORGANIZATION_CLASS" PRIMARY KEY ("OC_CODE")
+  USING INDEX  ENABLE
+   ) 
+	]');
+end;
+/
+
+insert into gcat.organization_class@gcat
+select * from organization_class;
+commit;
+
+
+
+
+-- Create public synonyms and grants.
+begin
+	dbms_utility.exec_ddl_statement@gcat(
+	q'[
+		create or replace procedure create_public_synonyms_and_grants as
+		begin
+			for tables in
+			(
+				select
+					'create or replace public synonym ' || object_name || ' for ' || owner || '.' || object_name v_synonym_sql,
+					'grant select on '||owner||'.'||object_name||' to GCAT_PUBLIC' v_grant_sql
+				from all_objects
+				where owner = 'GCAT'
+					and object_type not in ('INDEX')
+				order by object_name
+			) loop
+				execute immediate tables.v_synonym_sql;
+				execute immediate tables.v_grant_sql;
+			end loop;
+		end;
+	]');
+
+	execute immediate 'begin create_public_synonyms_and_grants@gcat; end;';
+
+	dbms_utility.exec_ddl_statement@gcat(
+	q'[
+		drop procedure create_public_synonyms_and_grants
+	]');
+end;
+/
