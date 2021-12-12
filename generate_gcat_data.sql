@@ -13,6 +13,73 @@ Cd into the directory and run this command as PDB SYS:
 */
 
 
+--------------------------------------------------------------------------------
+-- Design - one time step
+--------------------------------------------------------------------------------
+
+Cloud database users:
+	admin - manages data
+	gcat - owns objects and data
+	opengcat - read-only connection open to the public
+
+
+Local database packages:
+	todo:
+	gcat_helper
+	gcat_loader
+
+Column names:
+	Column names have a unique prefix plus the rest of the name based on the GCAT name. The prefix helps identify the source of the column in complicated SQL statements where there would otherwise be multiple columns with the same name.
+	Names that are normal words are separated by an underscore. For example, "ShortName" becomes short_name, but "EName" stays as ename.
+	Names that reference other columns have that column in the name. For example, the "Parent" column in ORGANIZATION is named "O_PARENT_O_CODE", to make it obvious which column it references.
+
+Instances whewre GCAT text data does not perfectly map the relational model of the GCATDB:
+	Vague dates, which contain both date and precision, were converted to two separate columns to store the date and precision.
+	"sites.tsv"."Site" is stored as SITE.S_CODE. (While "sites.tsv" has an empty "Code" for backwards compatibility, the database prefers name consistency over text file backwards compatibility.
+
+Tables:
+	* - Completed.
+
+
+LAUNCH
+	LAUNCH_PAYLOAD_ORG
+	LAUNCH_AGENCY
+
+SATELLITE
+	SATELLITE_ORG
+
+* ORGANIZATION
+*	ORGANIZATION_CLASS
+*	ORGANIZATION_ORG_TYPE
+*		ORGANIZATION_TYPE
+
+* PLATFORM
+
+SITE
+	SITE_ORG
+
+LAUNCH_VEHICLE
+	LAUNCH_VEHICLE_MANUFACTURER
+	LAUNCH_VEHICLE_FAMILY
+
+STAGE
+	STAGE_MANUFACTURER
+
+* PROPELLANT
+
+ENGINE
+	ENGINE_MANUFACTURER
+	ENGINE_PROPELLANT
+
+LAUNCH_VEHICLE_STAGE
+;
+
+select * from space.organization_org_type;
+select * from organization;
+
+
+
+
 
 --------------------------------------------------------------------------------
 -- Create Oracle Cloud Infrastructure (OCI) database - one time step
@@ -72,67 +139,6 @@ Test database link:
 	select * from dual@gcat;
 
 
-
-
---------------------------------------------------------------------------------
--- Design - one time step
---------------------------------------------------------------------------------
-
-Cloud database users:
-	admin - manages data
-	gcat - owns objects and data
-	opengcat - read-only connection open to the public
-
-
-Local database packages:
-	todo:
-	gcat_helper
-	gcat_loader
-
-Column names:
-	Column names have a unique prefix plus the rest of the name based on the GCAT name. The prefix helps in complicated SQL statements where multiple tables have similar column names.
-	Names that are normal words are separated by an underscore. For example, "ShortName" becomes short_name, but "EName" stays as ename.
-	Names that reference other columns have that column in the name. For example, the "Parent" column in ORGANIZATION is named "O_PARENT_O_CODE", to make it obvious which column it references.
-
-Tables:
-	* means done.
-
-
-LAUNCH
-	LAUNCH_PAYLOAD_ORG
-	LAUNCH_AGENCY
-
-SATELLITE
-	SATELLITE_ORG
-
-* ORGANIZATION
-*	ORGANIZATION_CLASS
-*	ORGANIZATION_ORG_TYPE
-*		ORGANIZATION_TYPE
-
-PLATFORM
-
-SITE
-	SITE_ORG
-
-LAUNCH_VEHICLE
-	LAUNCH_VEHICLE_MANUFACTURER
-	LAUNCH_VEHICLE_FAMILY
-
-STAGE
-	STAGE_MANUFACTURER
-
-* PROPELLANT
-
-ENGINE
-	ENGINE_MANUFACTURER
-	ENGINE_PROPELLANT
-
-LAUNCH_VEHICLE_STAGE
-;
-
-select * from space.organization_org_type;
-select * from organization;
 
 
 --------------------------------------------------------------------------------
@@ -526,7 +532,8 @@ create or replace view gcat_config_vw as
 select 'launch.tsv'    file_name, 'LAUNCH_STAGING'    staging_table_name, 73426  min_expected_rows, '#Launch_Tag	Launch_JD	Launch_Date	LV_Type	Variant	Flight_ID	Flight	Mission	FlightCode	Platform	Launch_Site	Launch_Pad	Ascent_Site	Ascent_Pad	Apogee	Apoflag	Range	RangeFlag	Dest	Agency	Launch_Code	Group	Category	LTCite	Cite	Notes' first_line from dual union all
 select 'engines.tsv'   file_name, 'ENGINES_STAGING'   staging_table_name,  1347  min_expected_rows, '#Name	Manufacturer	Family	Alt_Name	Oxidizer	Fuel	Mass	MFlag	Impulse	ImpFlag	Thrust	TFlag	Isp	IspFlag	Duration	DurFlag	Chambers	Date	Usage	Group' from dual union all
 select 'orgs.tsv'      file_name, 'ORGS_STAGING'      staging_table_name,  3270  min_expected_rows, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual union all
-select 'platforms.tsv' file_name, 'PLATFORMS_STAGING' staging_table_name,   360  min_expected_rows, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	VClass	VClassID	VID	Group	UName' from dual
+select 'platforms.tsv' file_name, 'PLATFORMS_STAGING' staging_table_name,   360  min_expected_rows, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	VClass	VClassID	VID	Group	UName' from dual union all
+select 'sites.tsv'     file_name, 'SITES_STAGING'     staging_table_name,   660  min_expected_rows, '#Site	Code	UCode	Type	StateCode	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	Group	UName' from dual
 order by file_name;
 
 
@@ -594,7 +601,7 @@ begin
 		select file_name
 		from gcat_config_vw
 		--TEMP for TESTING - only use one file.
-		where file_name = 'platforms.tsv'
+		where file_name = 'sites.tsv'
 		order by file_name
 	) loop
 		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 1, argument_value => '--output');
@@ -605,6 +612,9 @@ begin
 	end loop;
 end;
 /
+
+--Go here to check directory and files:
+select directory_path from dba_directories where directory_name = 'DATA_PUMP_DIR';
 
 
 
@@ -1017,6 +1027,107 @@ alter table platform add constraint fk_platform_organization foreign key (p_pare
 alter table platform add constraint fk_platform_organization_class foreign key (p_oc_code) references organization_class(oc_code);
 
 
+--SITE
+create table site compress as
+select
+	s_code,
+	s_ucode,
+	s_type,
+	s_statecode,
+	gcat_helper.vague_to_date(s_tstart) s_tstart,
+	gcat_helper.vague_to_precision(s_tstart) s_tstart_precision,
+	gcat_helper.vague_to_date(s_tstop) s_tstop,
+	gcat_helper.vague_to_precision(s_tstop) s_tstop_precision,
+	s_shortname,
+	s_name,
+	s_location,
+	gcat_helper.gcat_to_number(s_longitude) s_longitude,
+	gcat_helper.gcat_to_number(s_latitude) s_latitude,
+	gcat_helper.gcat_to_number(s_error) s_error,
+	s_parent_o_code,
+	s_shortename,
+	s_ename,
+	s_group,
+	s_uname
+from
+(
+	--Fix data issues.
+	select
+		s_code,
+		s_ucode,
+		s_type,
+		s_statecode,
+		replace(s_tstart, '1974 Nov  6:', '1974 Nov  6') s_tstart,
+		s_tstop,
+		s_shortname,
+		s_name,
+		s_location,
+		s_longitude,
+		s_latitude,
+		s_error,
+		--FIX: Replace some multi-parents with largest single parent.
+		replace(replace(replace(replace(replace(replace(replace(replace(replace(s_parent_o_code,
+			'ESRO/NASA', 'NASA'),
+			'INPE/NASA?', 'NASA'),
+			'NASA/USAF', 'NASA'),
+			'NASA/USAF?', 'NASA'),
+			'NASA?', 'NASA'),
+			'USAF?', 'USAF'),
+			'USN/AEC', 'USN'),
+			'USN/NASA', 'NASA'),
+			'USN/UMI', 'USN') s_parent_o_code,
+		s_shortename,
+		s_ename,
+		s_group,
+		s_uname
+	from
+	(
+		--Rename columns.
+		select
+			gcat_helper.convert_null("Site"      ) s_code,
+			gcat_helper.convert_null("UCode"     ) s_ucode,
+			gcat_helper.convert_null("Type"      ) s_type,
+			gcat_helper.convert_null("StateCode" ) s_statecode,
+			gcat_helper.convert_null("TStart"    ) s_tstart,
+			gcat_helper.convert_null("TStop"     ) s_tstop,
+			gcat_helper.convert_null("ShortName" ) s_shortname,
+			gcat_helper.convert_null("Name"      ) s_name,
+			gcat_helper.convert_null("Location"  ) s_location,
+			gcat_helper.convert_null("Longitude" ) s_longitude,
+			gcat_helper.convert_null("Latitude"  ) s_latitude,
+			gcat_helper.convert_null("Error"     ) s_error,
+			gcat_helper.convert_null("Parent"    ) s_parent_o_code,
+			gcat_helper.convert_null("ShortEName") s_shortename,
+			gcat_helper.convert_null("EName"     ) s_ename,
+			gcat_helper.convert_null("Group"     ) s_group,
+			gcat_helper.convert_null("UName"     ) s_uname
+		from sites_staging
+	) rename_columns
+) fix_data;
+
+alter table site add constraint pk_site primary key(s_code);
+alter table site add constraint fk_site_organization foreign key (s_parent_o_code) references organization(o_code);
+
+
+/*
+TODO, in this order
+SITE_ORG
+LAUNCH_VEHICLE_FAMILY
+LAUNCH_VEHICLE
+LAUNCH_VEHICLE_MANUFACTURER
+LAUNCH
+LAUNCH_PAYLOAD_ORG
+LAUNCH_AGENCY
+SATELLITE
+SATELLITE_ORG
+ENGINE
+STAGE
+LAUNCH_VEHICLE_STAGE
+STAGE_MANUFACTURER
+PROPELLANT
+ENGINE_PROPELLANT
+ENGINE_MANUFACTURER
+*/
 
 
 --Check date functions:
