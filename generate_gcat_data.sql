@@ -74,8 +74,21 @@ ENGINE
 LAUNCH_VEHICLE_STAGE
 ;
 
-select * from space.organization_org_type;
-select * from organization;
+
+
+
+--------------------------------------------------------------------------------
+-- Create configuration view based on expected headers and how to handle them - one time step.
+--------------------------------------------------------------------------------
+
+create or replace view gcat_config_vw as
+select 'launch.tsv'    file_name, 'LAUNCH_STAGING'    staging_table_name, 73426  min_expected_rows, '#Launch_Tag	Launch_JD	Launch_Date	LV_Type	Variant	Flight_ID	Flight	Mission	FlightCode	Platform	Launch_Site	Launch_Pad	Ascent_Site	Ascent_Pad	Apogee	Apoflag	Range	RangeFlag	Dest	Agency	Launch_Code	Group	Category	LTCite	Cite	Notes' first_line from dual union all
+select 'engines.tsv'   file_name, 'ENGINES_STAGING'   staging_table_name,  1347  min_expected_rows, '#Name	Manufacturer	Family	Alt_Name	Oxidizer	Fuel	Mass	MFlag	Impulse	ImpFlag	Thrust	TFlag	Isp	IspFlag	Duration	DurFlag	Chambers	Date	Usage	Group' from dual union all
+select 'orgs.tsv'      file_name, 'ORGS_STAGING'      staging_table_name,  3270  min_expected_rows, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual union all
+select 'platforms.tsv' file_name, 'PLATFORMS_STAGING' staging_table_name,   360  min_expected_rows, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	VClass	VClassID	VID	Group	UName' from dual union all
+select 'sites.tsv'     file_name, 'SITES_STAGING'     staging_table_name,   660  min_expected_rows, '#Site	Code	UCode	Type	StateCode	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	Group	UName' from dual union all
+select 'lp.tsv'        file_name, 'LP_STAGING'        staging_table_name,  2700  min_expected_rows, '#Site	Code	UCode	Type	StateCode	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual
+order by file_name;
 
 
 
@@ -525,20 +538,6 @@ end;
 
 
 --------------------------------------------------------------------------------
--- Create configuration view based on expected headers and how to handle them - one time step.
---------------------------------------------------------------------------------
-
-create or replace view gcat_config_vw as
-select 'launch.tsv'    file_name, 'LAUNCH_STAGING'    staging_table_name, 73426  min_expected_rows, '#Launch_Tag	Launch_JD	Launch_Date	LV_Type	Variant	Flight_ID	Flight	Mission	FlightCode	Platform	Launch_Site	Launch_Pad	Ascent_Site	Ascent_Pad	Apogee	Apoflag	Range	RangeFlag	Dest	Agency	Launch_Code	Group	Category	LTCite	Cite	Notes' first_line from dual union all
-select 'engines.tsv'   file_name, 'ENGINES_STAGING'   staging_table_name,  1347  min_expected_rows, '#Name	Manufacturer	Family	Alt_Name	Oxidizer	Fuel	Mass	MFlag	Impulse	ImpFlag	Thrust	TFlag	Isp	IspFlag	Duration	DurFlag	Chambers	Date	Usage	Group' from dual union all
-select 'orgs.tsv'      file_name, 'ORGS_STAGING'      staging_table_name,  3270  min_expected_rows, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual union all
-select 'platforms.tsv' file_name, 'PLATFORMS_STAGING' staging_table_name,   360  min_expected_rows, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	VClass	VClassID	VID	Group	UName' from dual union all
-select 'sites.tsv'     file_name, 'SITES_STAGING'     staging_table_name,   660  min_expected_rows, '#Site	Code	UCode	Type	StateCode	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	Group	UName' from dual
-order by file_name;
-
-
-
---------------------------------------------------------------------------------
 -- Create job to download files - one time step.
 -- MUST RUN THIS AS SYS.
 --------------------------------------------------------------------------------
@@ -601,7 +600,7 @@ begin
 		select file_name
 		from gcat_config_vw
 		--TEMP for TESTING - only use one file.
-		where file_name = 'sites.tsv'
+		where file_name = 'lp.tsv'
 		order by file_name
 	) loop
 		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 1, argument_value => '--output');
@@ -1044,7 +1043,6 @@ select
 	gcat_helper.gcat_to_number(s_longitude) s_longitude,
 	gcat_helper.gcat_to_number(s_latitude) s_latitude,
 	gcat_helper.gcat_to_number(s_error) s_error,
-	s_parent_o_code,
 	s_shortename,
 	s_ename,
 	s_group,
@@ -1065,17 +1063,6 @@ from
 		s_longitude,
 		s_latitude,
 		s_error,
-		--FIX: Replace some multi-parents with largest single parent.
-		replace(replace(replace(replace(replace(replace(replace(replace(replace(s_parent_o_code,
-			'ESRO/NASA', 'NASA'),
-			'INPE/NASA?', 'NASA'),
-			'NASA/USAF', 'NASA'),
-			'NASA/USAF?', 'NASA'),
-			'NASA?', 'NASA'),
-			'USAF?', 'USAF'),
-			'USN/AEC', 'USN'),
-			'USN/NASA', 'NASA'),
-			'USN/UMI', 'USN') s_parent_o_code,
 		s_shortename,
 		s_ename,
 		s_group,
@@ -1096,7 +1083,6 @@ from
 			gcat_helper.convert_null("Longitude" ) s_longitude,
 			gcat_helper.convert_null("Latitude"  ) s_latitude,
 			gcat_helper.convert_null("Error"     ) s_error,
-			gcat_helper.convert_null("Parent"    ) s_parent_o_code,
 			gcat_helper.convert_null("ShortEName") s_shortename,
 			gcat_helper.convert_null("EName"     ) s_ename,
 			gcat_helper.convert_null("Group"     ) s_group,
@@ -1106,7 +1092,45 @@ from
 ) fix_data;
 
 alter table site add constraint pk_site primary key(s_code);
-alter table site add constraint fk_site_organization foreign key (s_parent_o_code) references organization(o_code);
+
+
+--SITE_ORG
+create table site_org compress as
+select cast("Site" as varchar2(1000)) so_s_code, replace(column_value, '?') so_o_code
+from sites_staging
+cross join gcat_helper.get_nt_from_list("Parent", '/')
+where "Parent" <> '-'
+order by so_s_code;
+
+alter table site_org add constraint pk_site_org primary key(so_s_code, so_o_code);
+alter table site_org add constraint fk_site_org_site foreign key(so_s_code) references site(s_code);
+alter table site_org add constraint fk_site_org_org foreign key(so_o_code) references organization(o_code);
+
+
+
+
+
+select count(*) from space.site;
+select count(*) from space.site_org;
+
+select site_id, count(*) from space.site_org group by site_id having count(*) >= 2;
+
+
+
+select * from site where s_code not in (select o_code from organization);
+
+
+select * from site;
+select * from platform;
+
+select s_code from site intersect
+select p_code from platform;
+
+select * from sites_staging order by "Site";
+select * from platforms_staging order by "Code";
+select * from lp_staging order by "Site";
+select * from orgs_staging order by "Code";
+
 
 
 /*
@@ -1349,10 +1373,20 @@ end;
 --Create a public user to access GCAT data.
 --(This read-only password is public knowledge.)
 begin
-	dbms_utility.exec_ddl_statement@gcat('create user gcat_public identified by public_gcat#1A profile gcat_public_profile');
+	dbms_utility.exec_ddl_statement@gcat('create user gcat_public identified by public_gcat#1A profile gcat_public_profile quota 1M on data');
 	dbms_utility.exec_ddl_statement@gcat('grant create session to gcat_public');
 end;
 /
+
+--Create a simple table that will appear on the initial login, for users who didn't read anything else.
+begin
+	dbms_utility.exec_ddl_statement@gcat(q'[create table gcat_public.readme as select 'Test.' readme from dual]');
+end;
+/
+
+--TODO: Create triggers preventing altering or modifying any tables on GCAT_PUBLIC.
+
+
 
 --Prevent public user from changing the public password.
 /*
