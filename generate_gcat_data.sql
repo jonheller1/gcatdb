@@ -1120,8 +1120,8 @@ alter table platform_org add constraint fk_platform_org_org foreign key(po_o_cod
 --LAUNCH_POINT
 create table launch_point compress as
 select
-	lp_s_code,
-	lp_code,
+	cast(lp_s_code as varchar2(1000)) lp_s_code,
+	cast(lp_code as varchar2(1000)) lp_code,
 	lp_ucode,
 	lp_type,
 	lp_state_code,
@@ -1147,7 +1147,6 @@ from
 		lp_ucode,
 		lp_type,
 		lp_state_code,
-		--FIX bad data
 		replace(lp_tstart, '1974 Nov  6:', '1974 Nov  6') lp_tstart,
 		replace(lp_tstop, 'DZK3  -', null) lp_tstop,
 		lp_short_name,
@@ -1183,23 +1182,35 @@ from
 	) rename_columns
 ) fix_data;
 
-alter table platform add constraint pk_platform primary key(p_code);
-alter table platform add constraint fk_platform_organization_class foreign key (p_oc_code) references organization_class(oc_code);
+alter table launch_point add constraint pk_launch_point primary key(lp_s_code, lp_code);
+alter table launch_point add constraint fk_launch_point_site foreign key (lp_s_code) references site(s_code);
+
+
+--LAUNCH_POINT_ORG
+create table launch_point_org compress as
+select cast("Site" as varchar2(1000)) lpo_s_code, cast("Code" as varchar2(1000)) lpo_lp_code, replace(column_value, '?') lpo_o_code
+from lp_staging
+cross join gcat_helper.get_nt_from_list("Parent", '/')
+where "Parent" <> '-'
+order by 1,2;
+
+alter table launch_point_org add constraint pk_launch_point_org primary key(lpo_s_code, lpo_lp_code, lpo_o_code);
+alter table launch_point_org add constraint fk_launch_point_org_launch_point foreign key(lpo_s_code, lpo_lp_code) references launch_point(lp_s_code, lp_code);
+alter table launch_point_org add constraint fk_launch_point_org_org foreign key(lpo_o_code) references organization(o_code);
+
+--LPO codes not in ORG table - DNVG and PRC
+select *
+from launch_point_org
+left join organization
+	on lpo_o_code = o_code
+where o_code is null
+order by lpo_o_code;
 
 
 
-select count(*) from space.site;
-select count(*) from space.site_org;
-
-select site_id, count(*) from space.site_org group by site_id having count(*) >= 2;
+select * from launch_point_org;
 
 
-
-select * from site where s_code not in (select o_code from organization);
-
-
-select * from site;
-select * from platform;
 
 select s_code from site intersect
 select p_code from platform;
@@ -1230,44 +1241,6 @@ PROPELLANT
 ENGINE_PROPELLANT
 ENGINE_MANUFACTURER
 */
-
-
---Check date functions:
-select "TStart", gcat_helper.vague_to_date(replace("TStart", '-'))
-from orgs_staging;
-
-select distinct "Launch_Date", gcat_helper.vague_to_date(replace(replace(replace(replace(replace(replace("Launch_Date", '-'), '1963 Jun   5', '1963 Jun  5'), '1963 Jun  25', '1963 Jun 25'), '1963 Jun  26', '1963 Jun 26'), '1971 Mar 24 1832:0', '1971 Mar 24 1832:00'), '1971 Jul 31 2334:0', '1971 Jul 31 2334:00asdf'))
-from launch_staging;
-
-
---Code is the primary key.
-select "Code", count(*) from orgs_staging group by "Code" having count(*) > 1;
-
-
-
-
-select distinct "Parent" from orgs_staging where "Parent" like '%/%';
-
-select * from space.organization;
-
-
-
-
-select * from engines_staging;
-
-
-select * from engines_staging;
-
-
-
-select * from space.engine_propellant;
-
-drop table engine_propellant;
-drop table propellant;
-
-
-select * from propellant order by p_name;
-select propellant_name from space.propellant order by propellant_name;
 
 
 
