@@ -91,9 +91,9 @@ select 'engines.tsv'   file_name, 'ENGINES_STAGING'   staging_table_name,  1347 
 select 'orgs.tsv'      file_name, 'ORGS_STAGING'      staging_table_name,  3270  min_expected_rows, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual union all
 select 'sites.tsv'     file_name, 'SITES_STAGING'     staging_table_name,   660  min_expected_rows, '#Site	Code	UCode	Type	StateCode	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	Group	UName' from dual union all
 select 'platforms.tsv' file_name, 'PLATFORMS_STAGING' staging_table_name,   360  min_expected_rows, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	VClass	VClassID	VID	Group	UName' from dual union all
-select 'lp.tsv'        file_name, 'LP_STAGING'        staging_table_name,  2700  min_expected_rows, '#Site	Code	UCode	Type	StateCode	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual
+select 'lp.tsv'        file_name, 'LP_STAGING'        staging_table_name,  2700  min_expected_rows, '#Site	Code	UCode	Type	StateCode	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual union all
+select 'family.tsv'    file_name, 'FAMILY_STAGING'    staging_table_name,   615  min_expected_rows, '#Family' from dual
 order by file_name;
-
 
 
 
@@ -606,13 +606,18 @@ begin
 		select file_name
 		from gcat_config_vw
 		--TEMP for TESTING - only use one file.
-		where file_name = 'lp.tsv'
+		where file_name = 'family.tsv'
 		order by file_name
 	) loop
 		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 1, argument_value => '--output');
 		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 2, argument_value => v_directory_path || '/' || files.file_name);
 		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 3, argument_value => '--url');
-		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 4, argument_value => 'https://planet4589.org/space/gcat/tsv/tables/' || files.file_name);
+		--Exception for one file in wrong directory.
+		if files.file_name = 'family.tsv' then
+			dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 4, argument_value => 'https://planet4589.org/space/gcat/data/tables/family.tsv');
+		else
+			dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 4, argument_value => 'https://planet4589.org/space/gcat/tsv/tables/' || files.file_name);
+		end if;			
 		dbms_scheduler.run_job(v_name);
 	end loop;
 end;
@@ -1188,7 +1193,10 @@ alter table launch_point add constraint fk_launch_point_site foreign key (lp_s_c
 
 --LAUNCH_POINT_ORG
 create table launch_point_org compress as
-select cast("Site" as varchar2(1000)) lpo_s_code, cast("Code" as varchar2(1000)) lpo_lp_code, replace(column_value, '?') lpo_o_code
+select
+	cast("Site" as varchar2(1000)) lpo_s_code,
+	cast("Code" as varchar2(1000)) lpo_lp_code,
+	replace(replace(replace(column_value, '?'), 'PRC', 'CN'), 'DNVG', 'DVNG') lpo_o_code
 from lp_staging
 cross join gcat_helper.get_nt_from_list("Parent", '/')
 where "Parent" <> '-'
@@ -1198,23 +1206,23 @@ alter table launch_point_org add constraint pk_launch_point_org primary key(lpo_
 alter table launch_point_org add constraint fk_launch_point_org_launch_point foreign key(lpo_s_code, lpo_lp_code) references launch_point(lp_s_code, lp_code);
 alter table launch_point_org add constraint fk_launch_point_org_org foreign key(lpo_o_code) references organization(o_code);
 
---LPO codes not in ORG table - DNVG and PRC
-select *
-from launch_point_org
-left join organization
-	on lpo_o_code = o_code
-where o_code is null
-order by lpo_o_code;
+
+--LAUNCH_VEHICLE_FAMILY
+create table launch_vehicle_family compress as
+--FIX: Added distinct because there are duplicates.
+select distinct "Family" lv_family
+from family_staging
+where "Family" <> '-'
+order by 1;
+
+alter table launch_vehicle_family add constraint pk_launch_vehicle_family primary key(lv_family);
+
+
+--LAUNCH_VEHICLE
 
 
 
-select * from launch_point_org;
-
-
-
-select s_code from site intersect
-select p_code from platform;
-
+select * from family_staging;
 select * from sites_staging order by "Site";
 select * from platforms_staging order by "Code";
 select * from lp_staging order by "Site";
@@ -1224,8 +1232,6 @@ select * from orgs_staging order by "Code";
 
 /*
 TODO, in this order
-SITE_ORG
-LAUNCH_VEHICLE_FAMILY
 LAUNCH_VEHICLE
 LAUNCH_VEHICLE_MANUFACTURER
 LAUNCH
