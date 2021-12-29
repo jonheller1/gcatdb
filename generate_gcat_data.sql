@@ -63,7 +63,7 @@ SATELLITE
 *	LAUNCH_POINT_ORG
 
 LAUNCH_VEHICLE
-	LAUNCH_VEHICLE_MANUFACTURER
+	LAUNCH_VEHICLE_ORG
 	LAUNCH_VEHICLE_FAMILY
 
 STAGE
@@ -92,7 +92,8 @@ select 'orgs.tsv'      file_name, 'ORGS_STAGING'      staging_table_name,  3270 
 select 'sites.tsv'     file_name, 'SITES_STAGING'     staging_table_name,   660  min_expected_rows, '#Site	Code	UCode	Type	StateCode	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	Group	UName' from dual union all
 select 'platforms.tsv' file_name, 'PLATFORMS_STAGING' staging_table_name,   360  min_expected_rows, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	VClass	VClassID	VID	Group	UName' from dual union all
 select 'lp.tsv'        file_name, 'LP_STAGING'        staging_table_name,  2700  min_expected_rows, '#Site	Code	UCode	Type	StateCode	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual union all
-select 'family.tsv'    file_name, 'FAMILY_STAGING'    staging_table_name,   615  min_expected_rows, '#Family' from dual
+select 'family.tsv'    file_name, 'FAMILY_STAGING'    staging_table_name,   615  min_expected_rows, '#Family' from dual union all
+select 'lv.tsv'        file_name, 'LV_STAGING'        staging_table_name,  1660  min_expected_rows, '#LV_Name	LV_Family	LV_Manufacturer	LV_Variant	LV_Alias	LV_Min_Stage	LV_Max_Stage	Length	LFlag	Diameter	DFlag	Launch_Mass	MFlag	LEO_Capacity	GTO_Capacity	TO_Thrust	Class	Apogee	Range' from dual
 order by file_name;
 
 
@@ -174,6 +175,7 @@ create or replace package gcat_helper authid current_user is
 		'ORGANIZATION_TYPE',
 		'ORGANIZATION',
 		'PLATFORM',
+		'PLATFORM_ORG',
 		'ORGANIZATION_ORG_TYPE',
 		'SITE',
 		'SITE_ORG',
@@ -181,7 +183,7 @@ create or replace package gcat_helper authid current_user is
 		'LAUNCH_POINT_ORG',
 		'LAUNCH_VEHICLE_FAMILY',
 		'LAUNCH_VEHICLE',
-		'LAUNCH_VEHICLE_MANUFACTURER',
+		'LAUNCH_VEHICLE_ORG',
 		'LAUNCH',
 		'LAUNCH_PAYLOAD_ORG',
 		'LAUNCH_AGENCY',
@@ -586,7 +588,7 @@ grant alter on sys.gcat_curl_job to jheller;
 
 
 --------------------------------------------------------------------------------
--- Download the files into the directory.
+-- Download the files into the directory. Takes about 9 seconds.
 -- (Must run this, and everything below, as your normal user.)
 --------------------------------------------------------------------------------
 
@@ -606,7 +608,7 @@ begin
 		select file_name
 		from gcat_config_vw
 		--TEMP for TESTING - only use one file.
-		where file_name = 'family.tsv'
+		--where file_name = 'lv.tsv'
 		order by file_name
 	) loop
 		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 1, argument_value => '--output');
@@ -615,6 +617,8 @@ begin
 		--Exception for one file in wrong directory.
 		if files.file_name = 'family.tsv' then
 			dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 4, argument_value => 'https://planet4589.org/space/gcat/data/tables/family.tsv');
+		elsif files.file_name = 'launch.tsv' then
+			dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 4, argument_value => 'https://planet4589.org/space/gcat/tsv/launch/launch.tsv');
 		else
 			dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 4, argument_value => 'https://planet4589.org/space/gcat/tsv/tables/' || files.file_name);
 		end if;			
@@ -1219,7 +1223,82 @@ alter table launch_vehicle_family add constraint pk_launch_vehicle_family primar
 
 
 --LAUNCH_VEHICLE
+create table launch_vehicle compress as
+select
+	cast(lv_name as varchar2(1000)) lv_name,
+	lv_family,
+	lv_variant,
+	lv_alias,
+	gcat_helper.gcat_to_number(lv_min_stage) lv_min_stage,
+	gcat_helper.gcat_to_number(lv_max_stage) lv_max_stage,
+	gcat_helper.gcat_to_number(lv_length) lv_length,
+	lv_lflag,
+	gcat_helper.gcat_to_number(lv_diameter) lv_diameter,
+	lv_dflag,
+	gcat_helper.gcat_to_number(lv_launch_mass) lv_launch_mass,
+	lv_mflag,
+	gcat_helper.gcat_to_number(lv_leo_capacity) lv_leo_capacity,
+	gcat_helper.gcat_to_number(lv_gto_capacity) lv_gto_capacity,
+	gcat_helper.gcat_to_number(lv_to_thrust) lv_to_thrust,
+	lv_class,
+	gcat_helper.gcat_to_number(lv_apogee) lv_apogee,
+	gcat_helper.gcat_to_number(lv_range) lv_range
+from
+(
+	--Rename columns.
+	select
+		gcat_helper.convert_null("LV_Name"        ) lv_name,
+		gcat_helper.convert_null("LV_Family"      ) lv_family,
+		gcat_helper.convert_null("LV_Variant"     ) lv_variant,
+		gcat_helper.convert_null("LV_Alias"       ) lv_alias,
+		gcat_helper.convert_null("LV_Min_Stage"   ) lv_min_stage,
+		gcat_helper.convert_null("LV_Max_Stage"   ) lv_max_stage,
+		gcat_helper.convert_null("Length"         ) lv_length,
+		gcat_helper.convert_null("LFlag"          ) lv_lflag,
+		gcat_helper.convert_null("Diameter"       ) lv_diameter,
+		gcat_helper.convert_null("DFlag"          ) lv_dflag,
+		gcat_helper.convert_null("Launch_Mass"    ) lv_launch_mass,
+		gcat_helper.convert_null("MFlag"          ) lv_mflag,
+		gcat_helper.convert_null("LEO_Capacity"   ) lv_leo_capacity,
+		gcat_helper.convert_null("GTO_Capacity"   ) lv_gto_capacity,
+		gcat_helper.convert_null("TO_Thrust"      ) lv_to_thrust,
+		gcat_helper.convert_null("Class"          ) lv_class,
+		gcat_helper.convert_null("Apogee"         ) lv_apogee,
+		gcat_helper.convert_null("Range"          ) lv_range
+	from lv_staging
+);
 
+--(Nullable column LV_VARIANT prevents primary key)
+alter table launch_vehicle add constraint uq_launch_vehicle unique(lv_name, lv_variant);
+
+
+--LAUNCH_VEHICLE_ORG
+create table launch_vehicle_org compress as
+select
+	cast(gcat_helper.convert_null("LV_Name"   ) as varchar2(1000)) lvo_lv_name,
+	cast(gcat_helper.convert_null("LV_Variant") as varchar2(1000)) lvo_lv_variant,
+	--FIXES:
+	replace(replace(replace(replace(column_value, '?'),
+		'SKYRO','SKYR'),
+		'ROKTSN','ROKSN'),
+		'NCSIST','') --TODO: Missing data from orgs.tsv?
+	lvo_o_code
+from lv_staging
+cross join gcat_helper.get_nt_from_list("LV_Manufacturer", '/')
+where "LV_Manufacturer" <> '-'
+order by 1,2;
+
+alter table launch_vehicle_org add constraint uq_launch_vehicle_org unique(lvo_lv_name, lvo_lv_variant, lvo_o_code);
+alter table launch_vehicle_org add constraint fk_launch_vehicle_org_launch_vehicle foreign key(lvo_lv_name, lvo_lv_variant) references launch_vehicle(lv_name, lv_variant);
+alter table launch_vehicle_org add constraint fk_launch_vehicle_org_org foreign key(lvo_o_code) references organization(o_code);
+
+
+
+select *
+from launch_vehicle_org
+left join organization
+	on launch_vehicle_org.lvo_o_code = o_code
+where o_code is null;
 
 
 select * from family_staging;
@@ -1229,11 +1308,11 @@ select * from lp_staging order by "Site";
 select * from orgs_staging order by "Code";
 
 
+select * from user_constraints where r_constraint_name like '%PLATFORM%';
+
 
 /*
 TODO, in this order
-LAUNCH_VEHICLE
-LAUNCH_VEHICLE_MANUFACTURER
 LAUNCH
 LAUNCH_PAYLOAD_ORG
 LAUNCH_AGENCY
