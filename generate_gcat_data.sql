@@ -76,6 +76,8 @@ ENGINE
 	ENGINE_PROPELLANT
 
 LAUNCH_VEHICLE_STAGE
+
+REFERENCE
 ;
 
 
@@ -93,7 +95,8 @@ select 'sites.tsv'     file_name, 'SITES_STAGING'     staging_table_name,   660 
 select 'platforms.tsv' file_name, 'PLATFORMS_STAGING' staging_table_name,   360  min_expected_rows, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	VClass	VClassID	VID	Group	UName' from dual union all
 select 'lp.tsv'        file_name, 'LP_STAGING'        staging_table_name,  2700  min_expected_rows, '#Site	Code	UCode	Type	StateCode	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual union all
 select 'family.tsv'    file_name, 'FAMILY_STAGING'    staging_table_name,   615  min_expected_rows, '#Family' from dual union all
-select 'lv.tsv'        file_name, 'LV_STAGING'        staging_table_name,  1660  min_expected_rows, '#LV_Name	LV_Family	LV_Manufacturer	LV_Variant	LV_Alias	LV_Min_Stage	LV_Max_Stage	Length	LFlag	Diameter	DFlag	Launch_Mass	MFlag	LEO_Capacity	GTO_Capacity	TO_Thrust	Class	Apogee	Range' from dual
+select 'lv.tsv'        file_name, 'LV_STAGING'        staging_table_name,  1660  min_expected_rows, '#LV_Name	LV_Family	LV_Manufacturer	LV_Variant	LV_Alias	LV_Min_Stage	LV_Max_Stage	Length	LFlag	Diameter	DFlag	Launch_Mass	MFlag	LEO_Capacity	GTO_Capacity	TO_Thrust	Class	Apogee	Range' from dual union all
+select 'refs.tsv'      file_name, 'REFS_STAGING'      staging_table_name,  3050  min_expected_rows, '#Cite	Reference' from dual
 order by file_name;
 
 
@@ -184,6 +187,7 @@ create or replace package gcat_helper authid current_user is
 		'LAUNCH_VEHICLE_FAMILY',
 		'LAUNCH_VEHICLE',
 		'LAUNCH_VEHICLE_ORG',
+		'REFERENCE',
 		'LAUNCH',
 		'LAUNCH_PAYLOAD_ORG',
 		'LAUNCH_AGENCY',
@@ -608,7 +612,7 @@ begin
 		select file_name
 		from gcat_config_vw
 		--TEMP for TESTING - only use one file.
-		--where file_name = 'lv.tsv'
+		where file_name = 'refs.tsv'
 		order by file_name
 	) loop
 		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 1, argument_value => '--output');
@@ -1291,6 +1295,188 @@ order by 1,2;
 alter table launch_vehicle_org add constraint uq_launch_vehicle_org unique(lvo_lv_name, lvo_lv_variant, lvo_o_code);
 alter table launch_vehicle_org add constraint fk_launch_vehicle_org_launch_vehicle foreign key(lvo_lv_name, lvo_lv_variant) references launch_vehicle(lv_name, lv_variant);
 alter table launch_vehicle_org add constraint fk_launch_vehicle_org_org foreign key(lvo_o_code) references organization(o_code);
+
+
+--REFERENCE
+create table reference compress as
+select
+	r_cite,
+	r_reference
+from
+(
+	--Rename columns.
+	select
+		gcat_helper.convert_null("Cite"      ) r_cite,
+		gcat_helper.convert_null("Reference" ) r_reference
+	from refs_staging
+) rename_columns;
+
+alter table reference add constraint pk_reference primary key(r_cite);
+
+
+--LAUNCH
+create table launch compress as
+select
+	l_launch_tag,
+	gcat_helper.gcat_to_number(l_launch_jd) l_launch_jd,
+	gcat_helper.vague_to_date(l_launch_date) l_launch_date,
+	gcat_helper.vague_to_precision(l_launch_date) l_launch_date_precision,
+	l_lv_name,
+	l_lv_variant,
+	l_flight_id,
+	l_flight,
+	l_mission,
+	l_flightcode,
+	l_p_code,
+	l_launch_lp_s_code,
+	l_launch_lp_code,
+	l_ascent_lp_s_code,
+	l_ascent_lp_code,
+	gcat_helper.gcat_to_number(l_apogee) l_apogee,
+	l_apogee_flag,
+	gcat_helper.gcat_to_number(l_range) l_range,
+	l_range_flag,
+	l_dest,
+	l_launch_code,
+	l_group,
+	l_category,
+	l_primary_r_cite,
+	l_additional_r_cite,
+	l_notes
+from
+(
+	--Fix data
+	select
+		l_launch_tag,
+		l_launch_jd,
+		--FIX:
+		replace(replace(replace(replace(replace(l_launch_date
+			, '1963 Jun   5', '1963 Jun  5')
+			, '1963 Jun  25', '1963 Jun 25')
+			, '1963 Jun  26', '1963 Jun 26')
+			, '1971 Mar 24 1832:0', '1971 Mar 24 1832:00')
+			, '1971 Jul 31 2334:0', '1971 Jul 31 2334:00')
+		l_launch_date,
+		l_lv_name,
+		l_lv_variant,
+		l_flight_id,
+		l_flight,
+		l_mission,
+		l_flightcode,
+		l_p_code,
+		l_launch_lp_s_code,
+		l_launch_lp_code,
+		l_ascent_lp_s_code,
+		l_ascent_lp_code,
+		l_apogee,
+		l_apogee_flag,
+		l_range,
+		l_range_flag,
+		l_dest,
+		l_launch_code,
+		l_group,
+		l_category,
+		l_primary_r_cite,
+		l_additional_r_cite,
+		l_notes
+	from
+	(
+		--Rename columns.
+		select
+			gcat_helper.convert_null("Launch_Tag" ) l_launch_tag,
+			gcat_helper.convert_null("Launch_JD"  ) l_launch_jd,
+			gcat_helper.convert_null("Launch_Date") l_launch_date,
+			gcat_helper.convert_null("LV_Type"    ) l_lv_name,
+			gcat_helper.convert_null("Variant"    ) l_lv_variant,
+			gcat_helper.convert_null("Flight_ID"  ) l_flight_id,
+			gcat_helper.convert_null("Flight"     ) l_flight,
+			gcat_helper.convert_null("Mission"    ) l_mission,
+			gcat_helper.convert_null("FlightCode" ) l_flightcode,
+			gcat_helper.convert_null("Platform"   ) l_p_code,
+			gcat_helper.convert_null("Launch_Site") l_launch_lp_s_code,
+			gcat_helper.convert_null("Launch_Pad" ) l_launch_lp_code,
+			gcat_helper.convert_null("Ascent_Site") l_ascent_lp_s_code,
+			gcat_helper.convert_null("Ascent_Pad" ) l_ascent_lp_code,
+			gcat_helper.convert_null("Apogee"     ) l_apogee,
+			gcat_helper.convert_null("Apoflag"    ) l_apogee_flag,
+			gcat_helper.convert_null("Range"      ) l_range,
+			gcat_helper.convert_null("RangeFlag"  ) l_range_flag,
+			gcat_helper.convert_null("Dest"       ) l_dest,
+			gcat_helper.convert_null("Launch_Code") l_launch_code,
+			gcat_helper.convert_null("Group"      ) l_group,
+			gcat_helper.convert_null("Category"   ) l_category,
+			gcat_helper.convert_null("LTCite"     ) l_primary_r_cite,
+			gcat_helper.convert_null("Cite"       ) l_additional_r_cite,
+			gcat_helper.convert_null("Notes"      ) l_notes
+		from launch_staging
+	) rename_columns
+) fix_data
+;
+
+alter table launch add constraint pk_launch primary key (l_launch_tag);
+alter table launch add constraint fk_launch_platform foreign key (l_p_code) references platform(p_code);
+
+alter table launch add constraint fk_launch_launch_point  foreign key (l_launch_lp_s_code, l_launch_lp_code) references launch_point(lp_s_code, lp_code);
+alter table launch add constraint fk_launch_launch_point2 foreign key (l_ascent_lp_s_code, l_ascent_lp_code) references launch_point(lp_s_code, lp_code);
+
+
+
+select distinct "LTCite" from launch_staging;
+select distinct "Cite" from launch_staging;
+
+
+alter table platform add constraint pk_platform primary key(p_code);
+alter table platform add constraint fk_platform_organization_class foreign key (p_oc_code) references organization_class(oc_code);
+
+
+
+
+
+
+
+HVP/P7
+;
+select * from launch_point;
+select * from launch_point where lp_s_code = 'HVP';
+
+--TODO: Agency
+			gcat_helper.convert_null("Agency"     ) l_agency,
+
+
+
+l_lp_s_code
+
+select * from launch_vehicle;
+
+
+Launch_Tag
+Launch_JD
+Launch_Date
+LV_Type
+Variant
+Flight_ID
+Flight
+Mission
+FlightCode
+Platform
+Launch_Site
+Launch_Pad
+Ascent_Site
+Ascent_Pad
+Apogee
+Apoflag
+Range
+RangeFlag
+Dest
+Agency
+Launch_Code
+Group
+Category
+LTCite
+Cite
+Notes
+
+
 
 
 
