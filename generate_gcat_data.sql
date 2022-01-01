@@ -452,6 +452,7 @@ create or replace package body gcat_helper is
 	---------------------------------------
 	-- Purpose: Convert a GCAT NULL, a dash, to a database NULL.
 	function convert_null(p_string in varchar2) return varchar2 is
+		pragma udf;
 	begin
 		if p_string = '-' then
 			return null;
@@ -1315,6 +1316,7 @@ alter table reference add constraint pk_reference primary key(r_cite);
 
 
 --LAUNCH
+drop table launch;
 create table launch compress as
 select
 	l_launch_tag,
@@ -1326,7 +1328,7 @@ select
 	l_flight_id,
 	l_flight,
 	l_mission,
-	l_flightcode,
+	l_flight_code,
 	l_p_code,
 	l_launch_lp_s_code,
 	l_launch_lp_code,
@@ -1362,10 +1364,16 @@ from
 		l_flight_id,
 		l_flight,
 		l_mission,
-		l_flightcode,
-		l_p_code,
+		l_flight_code,
+		--FIX(?): Remove "?" from end, fix submarine name
+		replace(rtrim(l_p_code, '?'), 'SS-088', 'SS-083') l_p_code,
+		--FIX: Looks like NIIP-53 is a synonym for GIK-1.
+		replace(replace(
+			rtrim(l_launch_lp_s_code, '?')
+			,'NIIP-53', 'GIK-1')
+			,'NIIP-5', 'GIK-5')
 		l_launch_lp_s_code,
-		l_launch_lp_code,
+		rtrim(l_launch_lp_code, '?') l_launch_lp_code,
 		l_ascent_lp_s_code,
 		l_ascent_lp_code,
 		l_apogee,
@@ -1391,7 +1399,7 @@ from
 			gcat_helper.convert_null("Flight_ID"  ) l_flight_id,
 			gcat_helper.convert_null("Flight"     ) l_flight,
 			gcat_helper.convert_null("Mission"    ) l_mission,
-			gcat_helper.convert_null("FlightCode" ) l_flightcode,
+			gcat_helper.convert_null("FlightCode" ) l_flight_code,
 			gcat_helper.convert_null("Platform"   ) l_p_code,
 			gcat_helper.convert_null("Launch_Site") l_launch_lp_s_code,
 			gcat_helper.convert_null("Launch_Pad" ) l_launch_lp_code,
@@ -1415,18 +1423,113 @@ from
 
 alter table launch add constraint pk_launch primary key (l_launch_tag);
 alter table launch add constraint fk_launch_platform foreign key (l_p_code) references platform(p_code);
+alter table launch add constraint fk_launch_launch_site foreign key (l_launch_lp_s_code) references site(s_code);
+
+select * from launch;
 
 alter table launch add constraint fk_launch_launch_point  foreign key (l_launch_lp_s_code, l_launch_lp_code) references launch_point(lp_s_code, lp_code);
+
 alter table launch add constraint fk_launch_launch_point2 foreign key (l_ascent_lp_s_code, l_ascent_lp_code) references launch_point(lp_s_code, lp_code);
+
+
+--Do launch site codes match site codes? (GIK-53 should be GIK-5?)
+--After fix everything matches.
+select *
+from launch
+left join site
+	on launch.l_launch_lp_s_code = site.s_code
+where site.s_code is null;
+
+--NIIP-53 is GIK-1
+--NIIP-5 is GIK-5
+
+--Does combination of "Launch_Site" and "Launch_Pad" match values in Launch_Point?
+--No - there are 1713 rows missing.
+select l_launch_tag, l_launch_lp_s_code, l_launch_lp_code
+from launch
+left join launch_point
+	on l_launch_lp_s_code = lp_s_code
+	and l_launch_lp_code = lp_code
+where l_launch_lp_code is not null
+	and lp_s_code is null
+	and lp_code is null
+;
+
+select * from launch_point;
+
+
+
+
+
+--Does L_LAUNCH_LP_S_CODE and L_LAUNCH_LP_CODE match launch points?
+
+
+
+
+select *
+from launch
+left join platform
+	on l_p_code = p_code
+where l_p_code is not null
+	and p_code is null;
+
+select l_launch_tag, l_launch_lp_s_code, l_launch_lp_code, lp_s_code, lp_code
+from launch
+left join launch_point
+	on l_launch_lp_s_code = lp_s_code
+	and nvl(l_launch_lp_code, 'asdf') = nvl(lp_code, 'asdf')
+where (l_launch_lp_s_code is not null or l_launch_lp_code is not null)
+	and (lp_s_code is null and lp_code is null)
+order by 1,2,3;
+
+
+--Does launch EVER match launch_point? Yes, 19,062 times.
+select l_launch_tag, l_launch_lp_s_code, l_launch_lp_code, lp_s_code, lp_code
+from launch
+join launch_point
+	on l_launch_lp_s_code = lp_s_code
+	and nvl(l_launch_lp_code, 'asdf') = nvl(lp_code, 'asdf')
+order by 1,2,3;
+
+--23,660 times
+select count(*) from launch where l_launch_lp_code is not null;
+
+
+--Times when there is a LP_CODE but it doesn't match - 3762
+select l_launch_tag, l_launch_lp_s_code, l_launch_lp_code, lp_s_code, lp_code
+from launch
+left join launch_point
+	on l_launch_lp_s_code = lp_s_code
+	and l_launch_lp_code = lp_code
+where l_launch_lp_code is not null
+	and (lp_s_code is null and lp_code is null)
+order by 1,2,3;
+
+--NIIP-5 / LC1
+
+
+--Every L_LAUNCH_LP_S_CODE points to a site.
+select l_launch_tag, l_launch_lp_s_code, s_code
+from launch
+left join site
+	on l_launch_lp_s_code = s_code
+where l_launch_lp_s_code is not null
+	and s_code is null;
+
+
+
+select * from launch_point where lp_s_code = 'HLG';
+
+where l_p_code is not null
+	and p_code is null;
+
+
 
 
 
 select distinct "LTCite" from launch_staging;
 select distinct "Cite" from launch_staging;
 
-
-alter table platform add constraint pk_platform primary key(p_code);
-alter table platform add constraint fk_platform_organization_class foreign key (p_oc_code) references organization_class(oc_code);
 
 
 
@@ -1448,33 +1551,6 @@ l_lp_s_code
 
 select * from launch_vehicle;
 
-
-Launch_Tag
-Launch_JD
-Launch_Date
-LV_Type
-Variant
-Flight_ID
-Flight
-Mission
-FlightCode
-Platform
-Launch_Site
-Launch_Pad
-Ascent_Site
-Ascent_Pad
-Apogee
-Apoflag
-Range
-RangeFlag
-Dest
-Agency
-Launch_Code
-Group
-Category
-LTCite
-Cite
-Notes
 
 
 
