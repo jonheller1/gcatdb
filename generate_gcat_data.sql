@@ -1317,7 +1317,7 @@ alter table reference add constraint pk_reference primary key(r_cite);
 
 --LAUNCH
 drop table launch;
-create table launch compress as
+create table launch nologging compress as
 select
 	l_launch_tag,
 	gcat_helper.gcat_to_number(l_launch_jd) l_launch_jd,
@@ -1366,14 +1366,35 @@ from
 		l_mission,
 		l_flight_code,
 		--FIX(?): Remove "?" from end, fix submarine name
-		replace(rtrim(l_p_code, '?'), 'SS-088', 'SS-083') l_p_code,
-		--FIX: Looks like NIIP-53 is a synonym for GIK-1.
-		replace(replace(
-			rtrim(l_launch_lp_s_code, '?')
-			,'NIIP-53', 'GIK-1')
-			,'NIIP-5', 'GIK-5')
-		l_launch_lp_s_code,
-		rtrim(l_launch_lp_code, '?') l_launch_lp_code,
+		regexp_replace(rtrim(l_p_code, '?'), '^SS-088$', 'SS-083') l_p_code,
+		--FIX:
+		case
+			when l_launch_lp_s_code = 'PSCA' and l_launch_lp_code in ('LP2', 'LP2?') then 'KLC'
+			else
+				regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(
+					rtrim(l_launch_lp_s_code, '?')
+					,'^NIIP-53$', 'GIK-1')
+					,'^NIIP-5$', 'GIK-5')
+					,'^GNIIPV$', 'GIK-1')
+					,'^GIP-53$', 'GNIIP')
+					,'^GTsMP-4$', 'GTsP-4')
+					,'^SDSC$', 'SHAR')
+					,'^WIMB$', 'NAOTS')
+					,'^VSFBS$', 'VS')
+					,'^VSFB$', 'V')
+					,'^USC', 'KASC')
+		end l_launch_lp_s_code,
+		--FIX:
+		case
+			when l_launch_lp_s_code = 'SPFL' and l_launch_lp_code = 'LC47' then 'SLC47'
+			when rtrim(l_launch_lp_s_code, '?') = 'JQ' and rtrim(l_launch_lp_code, '?') = 'LC43/95A' then 'LC43/95'
+			else
+				regexp_replace(regexp_replace(
+					rtrim(l_launch_lp_code, '?')
+					,'^LC603  $', 'LC603')
+					--I guessed which one it is
+					,'^LC81$', 'LC81/23')
+			end l_launch_lp_code,
 		l_ascent_lp_s_code,
 		l_ascent_lp_code,
 		l_apogee,
@@ -1424,27 +1445,22 @@ from
 alter table launch add constraint pk_launch primary key (l_launch_tag);
 alter table launch add constraint fk_launch_platform foreign key (l_p_code) references platform(p_code);
 alter table launch add constraint fk_launch_launch_site foreign key (l_launch_lp_s_code) references site(s_code);
-
-select * from launch;
-
 alter table launch add constraint fk_launch_launch_point  foreign key (l_launch_lp_s_code, l_launch_lp_code) references launch_point(lp_s_code, lp_code);
+
+--TODO:
 
 alter table launch add constraint fk_launch_launch_point2 foreign key (l_ascent_lp_s_code, l_ascent_lp_code) references launch_point(lp_s_code, lp_code);
 
 
---Do launch site codes match site codes? (GIK-53 should be GIK-5?)
---After fix everything matches.
+--Check that launchsite matches - pass.
 select *
 from launch
 left join site
 	on launch.l_launch_lp_s_code = site.s_code
 where site.s_code is null;
 
---NIIP-53 is GIK-1
---NIIP-5 is GIK-5
-
 --Does combination of "Launch_Site" and "Launch_Pad" match values in Launch_Point?
---No - there are 1713 rows missing.
+--FAIL - 54 rows.
 select l_launch_tag, l_launch_lp_s_code, l_launch_lp_code
 from launch
 left join launch_point
@@ -1453,7 +1469,25 @@ left join launch_point
 where l_launch_lp_code is not null
 	and lp_s_code is null
 	and lp_code is null
+order by l_launch_lp_s_code
 ;
+
+
+
+SPFL --> LC47
+;
+
+select * from launch_point where lp_s_code = 'SPFL';
+
+select * from launch where l_launch_tag = '1979-A61';
+select * from launch_staging where "Launch_Tag" = '1979-A61';
+
+
+
+
+select * from launch_point;
+
+
 
 select * from launch_point;
 
