@@ -42,8 +42,9 @@ Tables:
 
 
 LAUNCH
+	LAUNCH_AGENCY_ORG
 	LAUNCH_PAYLOAD_ORG
-	LAUNCH_AGENCY
+	LAUNCH_INVESTIGATOR
 
 SATELLITE
 	SATELLITE_ORG
@@ -189,8 +190,9 @@ create or replace package gcat_helper authid current_user is
 		'LAUNCH_VEHICLE_ORG',
 		'REFERENCE',
 		'LAUNCH',
+		'LAUNCH_AGENCY_ORG',
 		'LAUNCH_PAYLOAD_ORG',
-		'LAUNCH_AGENCY',
+		'LAUNCH_INVESTIGATOR',
 		'SATELLITE',
 		'SATELLITE_ORG',
 		'ENGINE',
@@ -208,7 +210,7 @@ create or replace package gcat_helper authid current_user is
 	function vague_to_date(p_date_string in varchar2) return date;
 	function vague_to_precision(p_date_string in varchar2) return varchar2;
 	function gcat_to_number(p_number_string varchar2) return number;
-	function convert_null(p_string in varchar2) return varchar2;
+	function convert_null_and_trim(p_string in varchar2) return varchar2;
 end gcat_helper;
 /
 
@@ -450,16 +452,16 @@ create or replace package body gcat_helper is
 
 
 	---------------------------------------
-	-- Purpose: Convert a GCAT NULL, a dash, to a database NULL.
-	function convert_null(p_string in varchar2) return varchar2 is
+	-- Purpose: Convert a GCAT NULL, a dash, to a database NULL, and remove leading and trailing whitespace.
+	function convert_null_and_trim(p_string in varchar2) return varchar2 is
 		pragma udf;
 	begin
 		if p_string = '-' then
 			return null;
 		else
-			return p_string;
+			return trim(p_string);
 		end if;
-	end convert_null;
+	end convert_null_and_trim;
 
 end gcat_helper;
 /
@@ -921,23 +923,23 @@ from
 	(
 		--Rename columns.
 		select
-			gcat_helper.convert_null("Code"      ) o_code,
-			gcat_helper.convert_null("UCode"     ) o_ucode,
-			gcat_helper.convert_null("StateCode" ) o_state_code,
-			gcat_helper.convert_null("Type"      ) o_type,
-			gcat_helper.convert_null("Class"     ) o_oc_code,
-			gcat_helper.convert_null("TStart"    ) o_tstart,
-			gcat_helper.convert_null("TStop"     ) o_tstop,
-			gcat_helper.convert_null("ShortName" ) o_short_name,
-			gcat_helper.convert_null("Name"      ) o_name,
-			gcat_helper.convert_null("Location"  ) o_location,
-			gcat_helper.convert_null("Longitude" ) o_longitude,
-			gcat_helper.convert_null("Latitude"  ) o_latitude,
-			gcat_helper.convert_null("Error"     ) o_error,
-			gcat_helper.convert_null("Parent"    ) o_parent,
-			gcat_helper.convert_null("ShortEName") o_short_ename,
-			gcat_helper.convert_null("EName"     ) o_ename,
-			gcat_helper.convert_null("UName"     ) o_uname
+			gcat_helper.convert_null_and_trim("Code"      ) o_code,
+			gcat_helper.convert_null_and_trim("UCode"     ) o_ucode,
+			gcat_helper.convert_null_and_trim("StateCode" ) o_state_code,
+			gcat_helper.convert_null_and_trim("Type"      ) o_type,
+			gcat_helper.convert_null_and_trim("Class"     ) o_oc_code,
+			gcat_helper.convert_null_and_trim("TStart"    ) o_tstart,
+			gcat_helper.convert_null_and_trim("TStop"     ) o_tstop,
+			gcat_helper.convert_null_and_trim("ShortName" ) o_short_name,
+			gcat_helper.convert_null_and_trim("Name"      ) o_name,
+			gcat_helper.convert_null_and_trim("Location"  ) o_location,
+			gcat_helper.convert_null_and_trim("Longitude" ) o_longitude,
+			gcat_helper.convert_null_and_trim("Latitude"  ) o_latitude,
+			gcat_helper.convert_null_and_trim("Error"     ) o_error,
+			gcat_helper.convert_null_and_trim("Parent"    ) o_parent,
+			gcat_helper.convert_null_and_trim("ShortEName") o_short_ename,
+			gcat_helper.convert_null_and_trim("EName"     ) o_ename,
+			gcat_helper.convert_null_and_trim("UName"     ) o_uname
 		from orgs_staging
 	) rename_columns
 ) fix_data;
@@ -1006,22 +1008,22 @@ from
 	(
 		--Rename columns.
 		select
-			gcat_helper.convert_null("Site"      ) s_code,
-			gcat_helper.convert_null("UCode"     ) s_ucode,
-			gcat_helper.convert_null("Type"      ) s_type,
-			gcat_helper.convert_null("StateCode" ) s_statecode,
-			gcat_helper.convert_null("TStart"    ) s_tstart,
-			gcat_helper.convert_null("TStop"     ) s_tstop,
-			gcat_helper.convert_null("ShortName" ) s_shortname,
-			gcat_helper.convert_null("Name"      ) s_name,
-			gcat_helper.convert_null("Location"  ) s_location,
-			gcat_helper.convert_null("Longitude" ) s_longitude,
-			gcat_helper.convert_null("Latitude"  ) s_latitude,
-			gcat_helper.convert_null("Error"     ) s_error,
-			gcat_helper.convert_null("ShortEName") s_shortename,
-			gcat_helper.convert_null("EName"     ) s_ename,
-			gcat_helper.convert_null("Group"     ) s_group,
-			gcat_helper.convert_null("UName"     ) s_uname
+			gcat_helper.convert_null_and_trim("Site"      ) s_code,
+			gcat_helper.convert_null_and_trim("UCode"     ) s_ucode,
+			gcat_helper.convert_null_and_trim("Type"      ) s_type,
+			gcat_helper.convert_null_and_trim("StateCode" ) s_statecode,
+			gcat_helper.convert_null_and_trim("TStart"    ) s_tstart,
+			gcat_helper.convert_null_and_trim("TStop"     ) s_tstop,
+			gcat_helper.convert_null_and_trim("ShortName" ) s_shortname,
+			gcat_helper.convert_null_and_trim("Name"      ) s_name,
+			gcat_helper.convert_null_and_trim("Location"  ) s_location,
+			gcat_helper.convert_null_and_trim("Longitude" ) s_longitude,
+			gcat_helper.convert_null_and_trim("Latitude"  ) s_latitude,
+			gcat_helper.convert_null_and_trim("Error"     ) s_error,
+			gcat_helper.convert_null_and_trim("ShortEName") s_shortename,
+			gcat_helper.convert_null_and_trim("EName"     ) s_ename,
+			gcat_helper.convert_null_and_trim("Group"     ) s_group,
+			gcat_helper.convert_null_and_trim("UName"     ) s_uname
 		from sites_staging
 	) rename_columns
 ) fix_data;
@@ -1090,26 +1092,26 @@ from
 	(
 		--Rename columns.
 		select
-			gcat_helper.convert_null("Code"      ) p_code,
-			gcat_helper.convert_null("UCode"     ) p_ucode,
-			gcat_helper.convert_null("StateCode" ) p_state_code,
-			gcat_helper.convert_null("Type"      ) p_type,
-			gcat_helper.convert_null("Class"     ) p_oc_code,
-			gcat_helper.convert_null("TStart"    ) p_tstart,
-			gcat_helper.convert_null("TStop"     ) p_tstop,
-			gcat_helper.convert_null("ShortName" ) p_short_name,
-			gcat_helper.convert_null("Name"      ) p_name,
-			gcat_helper.convert_null("Location"  ) p_location,
-			gcat_helper.convert_null("Longitude" ) p_longitude,
-			gcat_helper.convert_null("Latitude"  ) p_latitude,
-			gcat_helper.convert_null("Error"     ) p_error,
-			gcat_helper.convert_null("ShortEName") p_short_ename,
-			gcat_helper.convert_null("EName"     ) p_ename,
-			gcat_helper.convert_null("UName"     ) p_uname,
-			gcat_helper.convert_null("VClass"    ) p_vclass,
-			gcat_helper.convert_null("VClassID"  ) p_vclassid,
-			gcat_helper.convert_null("VID"       ) p_vid,
-			gcat_helper.convert_null("Group"     ) p_group
+			gcat_helper.convert_null_and_trim("Code"      ) p_code,
+			gcat_helper.convert_null_and_trim("UCode"     ) p_ucode,
+			gcat_helper.convert_null_and_trim("StateCode" ) p_state_code,
+			gcat_helper.convert_null_and_trim("Type"      ) p_type,
+			gcat_helper.convert_null_and_trim("Class"     ) p_oc_code,
+			gcat_helper.convert_null_and_trim("TStart"    ) p_tstart,
+			gcat_helper.convert_null_and_trim("TStop"     ) p_tstop,
+			gcat_helper.convert_null_and_trim("ShortName" ) p_short_name,
+			gcat_helper.convert_null_and_trim("Name"      ) p_name,
+			gcat_helper.convert_null_and_trim("Location"  ) p_location,
+			gcat_helper.convert_null_and_trim("Longitude" ) p_longitude,
+			gcat_helper.convert_null_and_trim("Latitude"  ) p_latitude,
+			gcat_helper.convert_null_and_trim("Error"     ) p_error,
+			gcat_helper.convert_null_and_trim("ShortEName") p_short_ename,
+			gcat_helper.convert_null_and_trim("EName"     ) p_ename,
+			gcat_helper.convert_null_and_trim("UName"     ) p_uname,
+			gcat_helper.convert_null_and_trim("VClass"    ) p_vclass,
+			gcat_helper.convert_null_and_trim("VClassID"  ) p_vclassid,
+			gcat_helper.convert_null_and_trim("VID"       ) p_vid,
+			gcat_helper.convert_null_and_trim("Group"     ) p_group
 		from platforms_staging
 	) rename_columns
 ) fix_data;
@@ -1176,22 +1178,22 @@ from
 	(
 		--Rename columns.
 		select
-			gcat_helper.convert_null("Site"      ) lp_s_code,
-			gcat_helper.convert_null("Code"      ) lp_code,
-			gcat_helper.convert_null("UCode"     ) lp_ucode,
-			gcat_helper.convert_null("Type"      ) lp_type,
-			gcat_helper.convert_null("StateCode" ) lp_state_code,
-			gcat_helper.convert_null("TStart"    ) lp_tstart,
-			gcat_helper.convert_null("TStop"     ) lp_tstop,
-			gcat_helper.convert_null("ShortName" ) lp_short_name,
-			gcat_helper.convert_null("Name"      ) lp_name,
-			gcat_helper.convert_null("Location"  ) lp_location,
-			gcat_helper.convert_null("Longitude" ) lp_longitude,
-			gcat_helper.convert_null("Latitude"  ) lp_latitude,
-			gcat_helper.convert_null("Error"     ) lp_error,
-			gcat_helper.convert_null("ShortEName") lp_short_ename,
-			gcat_helper.convert_null("EName"     ) lp_ename,
-			gcat_helper.convert_null("UName"     ) lp_uname
+			gcat_helper.convert_null_and_trim("Site"      ) lp_s_code,
+			gcat_helper.convert_null_and_trim("Code"      ) lp_code,
+			gcat_helper.convert_null_and_trim("UCode"     ) lp_ucode,
+			gcat_helper.convert_null_and_trim("Type"      ) lp_type,
+			gcat_helper.convert_null_and_trim("StateCode" ) lp_state_code,
+			gcat_helper.convert_null_and_trim("TStart"    ) lp_tstart,
+			gcat_helper.convert_null_and_trim("TStop"     ) lp_tstop,
+			gcat_helper.convert_null_and_trim("ShortName" ) lp_short_name,
+			gcat_helper.convert_null_and_trim("Name"      ) lp_name,
+			gcat_helper.convert_null_and_trim("Location"  ) lp_location,
+			gcat_helper.convert_null_and_trim("Longitude" ) lp_longitude,
+			gcat_helper.convert_null_and_trim("Latitude"  ) lp_latitude,
+			gcat_helper.convert_null_and_trim("Error"     ) lp_error,
+			gcat_helper.convert_null_and_trim("ShortEName") lp_short_ename,
+			gcat_helper.convert_null_and_trim("EName"     ) lp_ename,
+			gcat_helper.convert_null_and_trim("UName"     ) lp_uname
 		from lp_staging
 	) rename_columns
 ) fix_data;
@@ -1252,24 +1254,24 @@ from
 (
 	--Rename columns.
 	select
-		gcat_helper.convert_null("LV_Name"        ) lv_name,
-		gcat_helper.convert_null("LV_Family"      ) lv_family,
-		gcat_helper.convert_null("LV_Variant"     ) lv_variant,
-		gcat_helper.convert_null("LV_Alias"       ) lv_alias,
-		gcat_helper.convert_null("LV_Min_Stage"   ) lv_min_stage,
-		gcat_helper.convert_null("LV_Max_Stage"   ) lv_max_stage,
-		gcat_helper.convert_null("Length"         ) lv_length,
-		gcat_helper.convert_null("LFlag"          ) lv_lflag,
-		gcat_helper.convert_null("Diameter"       ) lv_diameter,
-		gcat_helper.convert_null("DFlag"          ) lv_dflag,
-		gcat_helper.convert_null("Launch_Mass"    ) lv_launch_mass,
-		gcat_helper.convert_null("MFlag"          ) lv_mflag,
-		gcat_helper.convert_null("LEO_Capacity"   ) lv_leo_capacity,
-		gcat_helper.convert_null("GTO_Capacity"   ) lv_gto_capacity,
-		gcat_helper.convert_null("TO_Thrust"      ) lv_to_thrust,
-		gcat_helper.convert_null("Class"          ) lv_class,
-		gcat_helper.convert_null("Apogee"         ) lv_apogee,
-		gcat_helper.convert_null("Range"          ) lv_range
+		gcat_helper.convert_null_and_trim("LV_Name"        ) lv_name,
+		gcat_helper.convert_null_and_trim("LV_Family"      ) lv_family,
+		gcat_helper.convert_null_and_trim("LV_Variant"     ) lv_variant,
+		gcat_helper.convert_null_and_trim("LV_Alias"       ) lv_alias,
+		gcat_helper.convert_null_and_trim("LV_Min_Stage"   ) lv_min_stage,
+		gcat_helper.convert_null_and_trim("LV_Max_Stage"   ) lv_max_stage,
+		gcat_helper.convert_null_and_trim("Length"         ) lv_length,
+		gcat_helper.convert_null_and_trim("LFlag"          ) lv_lflag,
+		gcat_helper.convert_null_and_trim("Diameter"       ) lv_diameter,
+		gcat_helper.convert_null_and_trim("DFlag"          ) lv_dflag,
+		gcat_helper.convert_null_and_trim("Launch_Mass"    ) lv_launch_mass,
+		gcat_helper.convert_null_and_trim("MFlag"          ) lv_mflag,
+		gcat_helper.convert_null_and_trim("LEO_Capacity"   ) lv_leo_capacity,
+		gcat_helper.convert_null_and_trim("GTO_Capacity"   ) lv_gto_capacity,
+		gcat_helper.convert_null_and_trim("TO_Thrust"      ) lv_to_thrust,
+		gcat_helper.convert_null_and_trim("Class"          ) lv_class,
+		gcat_helper.convert_null_and_trim("Apogee"         ) lv_apogee,
+		gcat_helper.convert_null_and_trim("Range"          ) lv_range
 	from lv_staging
 );
 
@@ -1280,8 +1282,8 @@ alter table launch_vehicle add constraint uq_launch_vehicle unique(lv_name, lv_v
 --LAUNCH_VEHICLE_ORG
 create table launch_vehicle_org compress as
 select
-	cast(gcat_helper.convert_null("LV_Name"   ) as varchar2(1000)) lvo_lv_name,
-	cast(gcat_helper.convert_null("LV_Variant") as varchar2(1000)) lvo_lv_variant,
+	cast(gcat_helper.convert_null_and_trim("LV_Name"   ) as varchar2(1000)) lvo_lv_name,
+	cast(gcat_helper.convert_null_and_trim("LV_Variant") as varchar2(1000)) lvo_lv_variant,
 	--FIXES:
 	replace(replace(replace(replace(column_value, '?'),
 		'SKYRO','SKYR'),
@@ -1307,8 +1309,8 @@ from
 (
 	--Rename columns.
 	select
-		gcat_helper.convert_null("Cite"      ) r_cite,
-		gcat_helper.convert_null("Reference" ) r_reference
+		gcat_helper.convert_null_and_trim("Cite"      ) r_cite,
+		gcat_helper.convert_null_and_trim("Reference" ) r_reference
 	from refs_staging
 ) rename_columns;
 
@@ -1391,12 +1393,19 @@ from
 			else
 				regexp_replace(regexp_replace(
 					rtrim(l_launch_lp_code, '?')
-					,'^LC603  $', 'LC603')
+					,'^LC603  ?$', 'LC603')
 					--I guessed which one it is
 					,'^LC81$', 'LC81/23')
 			end l_launch_lp_code,
+		regexp_replace(rtrim(l_ascent_lp_s_code, '?')
+			,'^DGAEML$', 'CEL')
 		l_ascent_lp_s_code,
-		l_ascent_lp_code,
+		--FIX:
+		case
+			when l_ascent_lp_s_code = 'KMR' and l_ascent_lp_code = 'Lp1' then 'LP1'
+			when l_ascent_lp_s_code = 'A51' and l_ascent_lp_code = 'X' then 'X1'
+			else rtrim(l_ascent_lp_code, '?')
+		end l_ascent_lp_code,
 		l_apogee,
 		l_apogee_flag,
 		l_range,
@@ -1412,55 +1421,54 @@ from
 	(
 		--Rename columns.
 		select
-			gcat_helper.convert_null("Launch_Tag" ) l_launch_tag,
-			gcat_helper.convert_null("Launch_JD"  ) l_launch_jd,
-			gcat_helper.convert_null("Launch_Date") l_launch_date,
-			gcat_helper.convert_null("LV_Type"    ) l_lv_name,
-			gcat_helper.convert_null("Variant"    ) l_lv_variant,
-			gcat_helper.convert_null("Flight_ID"  ) l_flight_id,
-			gcat_helper.convert_null("Flight"     ) l_flight,
-			gcat_helper.convert_null("Mission"    ) l_mission,
-			gcat_helper.convert_null("FlightCode" ) l_flight_code,
-			gcat_helper.convert_null("Platform"   ) l_p_code,
-			gcat_helper.convert_null("Launch_Site") l_launch_lp_s_code,
-			gcat_helper.convert_null("Launch_Pad" ) l_launch_lp_code,
-			gcat_helper.convert_null("Ascent_Site") l_ascent_lp_s_code,
-			gcat_helper.convert_null("Ascent_Pad" ) l_ascent_lp_code,
-			gcat_helper.convert_null("Apogee"     ) l_apogee,
-			gcat_helper.convert_null("Apoflag"    ) l_apogee_flag,
-			gcat_helper.convert_null("Range"      ) l_range,
-			gcat_helper.convert_null("RangeFlag"  ) l_range_flag,
-			gcat_helper.convert_null("Dest"       ) l_dest,
-			gcat_helper.convert_null("Launch_Code") l_launch_code,
-			gcat_helper.convert_null("Group"      ) l_group,
-			gcat_helper.convert_null("Category"   ) l_category,
-			gcat_helper.convert_null("LTCite"     ) l_primary_r_cite,
-			gcat_helper.convert_null("Cite"       ) l_additional_r_cite,
-			gcat_helper.convert_null("Notes"      ) l_notes
+			gcat_helper.convert_null_and_trim("Launch_Tag" ) l_launch_tag,
+			gcat_helper.convert_null_and_trim("Launch_JD"  ) l_launch_jd,
+			gcat_helper.convert_null_and_trim("Launch_Date") l_launch_date,
+			gcat_helper.convert_null_and_trim("LV_Type"    ) l_lv_name,
+			gcat_helper.convert_null_and_trim("Variant"    ) l_lv_variant,
+			gcat_helper.convert_null_and_trim("Flight_ID"  ) l_flight_id,
+			gcat_helper.convert_null_and_trim("Flight"     ) l_flight,
+			gcat_helper.convert_null_and_trim("Mission"    ) l_mission,
+			gcat_helper.convert_null_and_trim("FlightCode" ) l_flight_code,
+			gcat_helper.convert_null_and_trim("Platform"   ) l_p_code,
+			gcat_helper.convert_null_and_trim("Launch_Site") l_launch_lp_s_code,
+			gcat_helper.convert_null_and_trim("Launch_Pad" ) l_launch_lp_code,
+			gcat_helper.convert_null_and_trim("Ascent_Site") l_ascent_lp_s_code,
+			gcat_helper.convert_null_and_trim("Ascent_Pad" ) l_ascent_lp_code,
+			gcat_helper.convert_null_and_trim("Apogee"     ) l_apogee,
+			gcat_helper.convert_null_and_trim("Apoflag"    ) l_apogee_flag,
+			gcat_helper.convert_null_and_trim("Range"      ) l_range,
+			gcat_helper.convert_null_and_trim("RangeFlag"  ) l_range_flag,
+			gcat_helper.convert_null_and_trim("Dest"       ) l_dest,
+			gcat_helper.convert_null_and_trim("Launch_Code") l_launch_code,
+			gcat_helper.convert_null_and_trim("Group"      ) l_group,
+			gcat_helper.convert_null_and_trim("Category"   ) l_category,
+			gcat_helper.convert_null_and_trim("LTCite"     ) l_primary_r_cite,
+			gcat_helper.convert_null_and_trim("Cite"       ) l_additional_r_cite,
+			gcat_helper.convert_null_and_trim("Notes"      ) l_notes
 		from launch_staging
 	) rename_columns
-) fix_data
-;
+) fix_data;
 
 alter table launch add constraint pk_launch primary key (l_launch_tag);
 alter table launch add constraint fk_launch_platform foreign key (l_p_code) references platform(p_code);
 alter table launch add constraint fk_launch_launch_site foreign key (l_launch_lp_s_code) references site(s_code);
 alter table launch add constraint fk_launch_launch_point  foreign key (l_launch_lp_s_code, l_launch_lp_code) references launch_point(lp_s_code, lp_code);
+alter table launch add constraint fk_launch_ascent_site foreign key (l_ascent_lp_s_code) references site(s_code);
+alter table launch add constraint fk_launch_ascent_point foreign key (l_ascent_lp_s_code, l_ascent_lp_code) references launch_point(lp_s_code, lp_code);
 
---TODO:
+/*
 
-alter table launch add constraint fk_launch_launch_point2 foreign key (l_ascent_lp_s_code, l_ascent_lp_code) references launch_point(lp_s_code, lp_code);
+--Keep these data checks - they may be useful if there are future error
 
-
---Check that launchsite matches - pass.
+--Check that "Launch_Site" matches site.s_code.
 select *
 from launch
 left join site
 	on launch.l_launch_lp_s_code = site.s_code
 where site.s_code is null;
 
---Does combination of "Launch_Site" and "Launch_Pad" match values in Launch_Point?
---FAIL - 54 rows.
+--Check that "Launch_Site" and "Launch_Pad" matches values in Launch_Point.
 select l_launch_tag, l_launch_lp_s_code, l_launch_lp_code
 from launch
 left join launch_point
@@ -1469,117 +1477,58 @@ left join launch_point
 where l_launch_lp_code is not null
 	and lp_s_code is null
 	and lp_code is null
-order by l_launch_lp_s_code
-;
+order by l_launch_lp_s_code;
 
-
-
-SPFL --> LC47
-;
-
-select * from launch_point where lp_s_code = 'SPFL';
-
-select * from launch where l_launch_tag = '1979-A61';
-select * from launch_staging where "Launch_Tag" = '1979-A61';
-
-
-
-
-select * from launch_point;
-
-
-
-select * from launch_point;
-
-
-
-
-
---Does L_LAUNCH_LP_S_CODE and L_LAUNCH_LP_CODE match launch points?
-
-
-
-
-select *
-from launch
-left join platform
-	on l_p_code = p_code
-where l_p_code is not null
-	and p_code is null;
-
-select l_launch_tag, l_launch_lp_s_code, l_launch_lp_code, lp_s_code, lp_code
-from launch
-left join launch_point
-	on l_launch_lp_s_code = lp_s_code
-	and nvl(l_launch_lp_code, 'asdf') = nvl(lp_code, 'asdf')
-where (l_launch_lp_s_code is not null or l_launch_lp_code is not null)
-	and (lp_s_code is null and lp_code is null)
-order by 1,2,3;
-
-
---Does launch EVER match launch_point? Yes, 19,062 times.
-select l_launch_tag, l_launch_lp_s_code, l_launch_lp_code, lp_s_code, lp_code
-from launch
-join launch_point
-	on l_launch_lp_s_code = lp_s_code
-	and nvl(l_launch_lp_code, 'asdf') = nvl(lp_code, 'asdf')
-order by 1,2,3;
-
---23,660 times
-select count(*) from launch where l_launch_lp_code is not null;
-
-
---Times when there is a LP_CODE but it doesn't match - 3762
-select l_launch_tag, l_launch_lp_s_code, l_launch_lp_code, lp_s_code, lp_code
-from launch
-left join launch_point
-	on l_launch_lp_s_code = lp_s_code
-	and l_launch_lp_code = lp_code
-where l_launch_lp_code is not null
-	and (lp_s_code is null and lp_code is null)
-order by 1,2,3;
-
---NIIP-5 / LC1
-
-
---Every L_LAUNCH_LP_S_CODE points to a site.
-select l_launch_tag, l_launch_lp_s_code, s_code
+--Check that "Ascent_Site" matches site.s_code.
+select l_launch_tag, l_ascent_lp_s_code
 from launch
 left join site
-	on l_launch_lp_s_code = s_code
-where l_launch_lp_s_code is not null
-	and s_code is null;
+	on launch.l_ascent_lp_s_code = site.s_code
+where
+	l_ascent_lp_s_code is not null
+	and site.s_code is null;
+
+--Check that "Launch_Site" and "Launch_Pad" matches values in Launch_Point.
+select l_launch_tag, l_ascent_lp_s_code, l_ascent_lp_code
+from launch
+left join launch_point
+	on l_ascent_lp_s_code = lp_s_code
+	and l_ascent_lp_code = lp_code
+where l_ascent_lp_code is not null
+	and lp_s_code is null
+	and lp_code is null
+order by l_ascent_lp_s_code;
+*/
+
+
+--LAUNCH_REFERENCE
+--(TODO: This data is perhaps too dirty to process.
+-- There are too many rows that don't match, some R_CITEs have "/" in the name, etc.)
+
+
+--LAUNCH_INVESTIGATOR
+create table launch_investigator compress as
+select cast(li_l_launch_tag as varchar2(1000)) li_l_launch_tag, column_value li_investigator
+from
+(
+	--Get the list of investigators by removing everything before the last slash.
+	select
+		"Launch_Tag" li_l_launch_tag,
+		regexp_replace(replace("Group", '?'), '.*/') investigators
+	from launch_staging
+	where "Group" <> '-'
+) investigators_list
+cross join gcat_helper.get_nt_from_list(investigators, ',')
+where investigators is not null;
+
+alter table launch_investigator add constraint pk_launch_investigator primary key(li_l_launch_tag, li_investigator);
+alter table launch_investigator add constraint fk_launch_investigator_launch foreign key(li_l_launch_tag) references launch(l_launch_tag);
 
 
 
-select * from launch_point where lp_s_code = 'HLG';
-
-where l_p_code is not null
-	and p_code is null;
-
-
-
-
-
-select distinct "LTCite" from launch_staging;
-select distinct "Cite" from launch_staging;
-
-
-
-
-
-
-
-
-HVP/P7
-;
-select * from launch_point;
-select * from launch_point where lp_s_code = 'HVP';
 
 --TODO: Agency
-			gcat_helper.convert_null("Agency"     ) l_agency,
-
-
+			gcat_helper.convert_null_and_trim("Agency") l_agency,
 
 l_lp_s_code
 
@@ -1588,13 +1537,12 @@ select * from launch_vehicle;
 
 
 
+select distinct replace("Group", '?') from launch_staging where "Group" not like '%/%';
 
 
-select *
-from launch_vehicle_org
-left join organization
-	on launch_vehicle_org.lvo_o_code = o_code
-where o_code is null;
+select * from table(gcat_helper.get_nt_from_list('BAJ/', '/'));
+select * from table(gcat_helper.get_nt_from_list('/BAJ//', '/'));
+
 
 
 select * from family_staging;
