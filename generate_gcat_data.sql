@@ -1506,9 +1506,73 @@ order by l_ascent_lp_s_code;
 -- There are too many rows that don't match, some R_CITEs have "/" in the name, etc.)
 
 
+--LAUNCH_AGENCY_ORG
+create table launch_agency_org compress as
+select
+	cast(lao_l_launch_tag as varchar2(1000)) lao_l_launch_tag,
+	column_value lao_o_code
+from
+(
+	--Get the list of agency orgs by including only things before the last slash.
+	select
+		"Launch_Tag" lao_l_launch_tag,
+		replace("Agency", '?') agency_orgs
+	from launch_staging
+	where "Agency" <> '-'
+) payload_list
+cross join gcat_helper.get_nt_from_list(agency_orgs, '/')
+where agency_orgs is not null
+order by 1,2;
+
+alter table launch_agency_org add constraint pk_launch_agency_org primary key(lao_l_launch_tag, lao_o_code);
+alter table launch_agency_org add constraint fk_launch_agency_org_launch foreign key(lao_l_launch_tag) references launch(l_launch_tag);
+alter table launch_agency_org add constraint fk_launch_agency_org_org foreign key(lao_o_code) references organization(o_code);
+
+
+--LAUNCH_PAYLOAD_ORG
+create table launch_payload_org compress as
+select
+	cast(lpo_l_launch_tag as varchar2(1000)) lpo_l_launch_tag,
+	--FIX
+	case
+		when lpo_l_launch_tag = '1964-S509' and column_value = 'PARL' then 'LPARL'
+		when lpo_l_launch_tag = '1965-W199' and column_value = 'AGPC' then 'APGC'
+		else column_value
+	end lpo_o_code
+from
+(
+	--Get the list of payload orgs by including only things before the last slash.
+	select
+		"Launch_Tag" lpo_l_launch_tag,
+		rtrim(regexp_substr(replace("Group", '?'), '.*/'), '/') payload_orgs
+	from launch_staging
+	where "Group" <> '-'
+		--FIX: Ignore this value until RIT exists in orgs file.
+		and not ("Launch_Tag" = '2021-S34' and "Group" = 'RIT/Zemcov')
+) payload_list
+cross join gcat_helper.get_nt_from_list(payload_orgs, '/')
+where payload_orgs is not null
+order by 1,2;
+
+alter table launch_payload_org add constraint pk_launch_payload_org primary key(lpo_l_launch_tag, lpo_o_code);
+alter table launch_payload_org add constraint fk_launch_payload_org_launch foreign key(lpo_l_launch_tag) references launch(l_launch_tag);
+alter table launch_payload_org add constraint fk_launch_payload_org_org foreign key(lpo_o_code) references organization(o_code);
+
+/*
+--Payload orgs not in organization table.
+select *
+from launch_payload_org
+left join organization
+	on lpo_o_code = o_code
+where o_code is null;
+*/
+
+
 --LAUNCH_INVESTIGATOR
 create table launch_investigator compress as
-select cast(li_l_launch_tag as varchar2(1000)) li_l_launch_tag, column_value li_investigator
+select
+	cast(li_l_launch_tag as varchar2(1000)) li_l_launch_tag,
+	column_value li_investigator
 from
 (
 	--Get the list of investigators by removing everything before the last slash.
@@ -1526,12 +1590,7 @@ alter table launch_investigator add constraint fk_launch_investigator_launch for
 
 
 
-
---TODO: Agency
-			gcat_helper.convert_null_and_trim("Agency") l_agency,
-
-l_lp_s_code
-
+--TODO: Vehicle?
 select * from launch_vehicle;
 
 
