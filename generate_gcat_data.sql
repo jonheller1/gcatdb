@@ -49,19 +49,18 @@ LAUNCH
 SATELLITE
 	SATELLITE_ORG
 
-* ORGANIZATION
-*	ORGANIZATION_CLASS
-*	ORGANIZATION_ORG_TYPE
-*		ORGANIZATION_TYPE
+ORGANIZATION
+	ORGANIZATION_ORG_TYPE
+		ORGANIZATION_TYPE
 
-* SITE
-*	SITE_ORG
+SITE
+	SITE_ORG
 
-* PLATFORM
-*	PLATFORM_ORG
+PLATFORM
+	PLATFORM_ORG
 
-* LAUNCH_POINT
-*	LAUNCH_POINT_ORG
+LAUNCH_POINT
+	LAUNCH_POINT_ORG
 
 LAUNCH_VEHICLE
 	LAUNCH_VEHICLE_ORG
@@ -70,7 +69,7 @@ LAUNCH_VEHICLE
 STAGE
 	STAGE_MANUFACTURER
 
-* PROPELLANT
+PROPELLANT
 
 ENGINE
 	ENGINE_MANUFACTURER
@@ -79,6 +78,9 @@ ENGINE
 LAUNCH_VEHICLE_STAGE
 
 REFERENCE
+
+WORLD
+SPIN
 ;
 
 
@@ -89,15 +91,18 @@ REFERENCE
 --------------------------------------------------------------------------------
 
 create or replace view gcat_config_vw as
-select 'launch.tsv'    file_name, 'LAUNCH_STAGING'    staging_table_name, 73426  min_expected_rows, '#Launch_Tag	Launch_JD	Launch_Date	LV_Type	Variant	Flight_ID	Flight	Mission	FlightCode	Platform	Launch_Site	Launch_Pad	Ascent_Site	Ascent_Pad	Apogee	Apoflag	Range	RangeFlag	Dest	Agency	Launch_Code	Group	Category	LTCite	Cite	Notes' first_line from dual union all
-select 'engines.tsv'   file_name, 'ENGINES_STAGING'   staging_table_name,  1347  min_expected_rows, '#Name	Manufacturer	Family	Alt_Name	Oxidizer	Fuel	Mass	MFlag	Impulse	ImpFlag	Thrust	TFlag	Isp	IspFlag	Duration	DurFlag	Chambers	Date	Usage	Group' from dual union all
-select 'orgs.tsv'      file_name, 'ORGS_STAGING'      staging_table_name,  3270  min_expected_rows, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual union all
-select 'sites.tsv'     file_name, 'SITES_STAGING'     staging_table_name,   660  min_expected_rows, '#Site	Code	UCode	Type	StateCode	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	Group	UName' from dual union all
-select 'platforms.tsv' file_name, 'PLATFORMS_STAGING' staging_table_name,   360  min_expected_rows, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	VClass	VClassID	VID	Group	UName' from dual union all
-select 'lp.tsv'        file_name, 'LP_STAGING'        staging_table_name,  2700  min_expected_rows, '#Site	Code	UCode	Type	StateCode	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual union all
-select 'family.tsv'    file_name, 'FAMILY_STAGING'    staging_table_name,   615  min_expected_rows, '#Family' from dual union all
-select 'lv.tsv'        file_name, 'LV_STAGING'        staging_table_name,  1660  min_expected_rows, '#LV_Name	LV_Family	LV_Manufacturer	LV_Variant	LV_Alias	LV_Min_Stage	LV_Max_Stage	Length	LFlag	Diameter	DFlag	Launch_Mass	MFlag	LEO_Capacity	GTO_Capacity	TO_Thrust	Class	Apogee	Range' from dual union all
-select 'refs.tsv'      file_name, 'REFS_STAGING'      staging_table_name,  3050  min_expected_rows, '#Cite	Reference' from dual
+select 'launch.tsv'    file_name, 'LAUNCH_STAGING'    staging_table_name, 73426 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/launch/launch.tsv'    url, '#Launch_Tag	Launch_JD	Launch_Date	LV_Type	Variant	Flight_ID	Flight	Mission	FlightCode	Platform	Launch_Site	Launch_Pad	Ascent_Site	Ascent_Pad	Apogee	Apoflag	Range	RangeFlag	Dest	Agency	Launch_Code	Group	Category	LTCite	Cite	Notes' first_line from dual union all
+select 'engines.tsv'   file_name, 'ENGINES_STAGING'   staging_table_name,  1347 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/engines.tsv'   url, '#Name	Manufacturer	Family	Alt_Name	Oxidizer	Fuel	Mass	MFlag	Impulse	ImpFlag	Thrust	TFlag	Isp	IspFlag	Duration	DurFlag	Chambers	Date	Usage	Group' from dual union all
+select 'orgs.tsv'      file_name, 'ORGS_STAGING'      staging_table_name,  3270 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/orgs.tsv'      url, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual union all
+select 'sites.tsv'     file_name, 'SITES_STAGING'     staging_table_name,   660 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/sites.tsv'     url, '#Site	Code	UCode	Type	StateCode	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	Group	UName' from dual union all
+select 'platforms.tsv' file_name, 'PLATFORMS_STAGING' staging_table_name,   360 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/platforms.tsv' url, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	VClass	VClassID	VID	Group	UName' from dual union all
+select 'lp.tsv'        file_name, 'LP_STAGING'        staging_table_name,  2700 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/lp'            url, '#Site	Code	UCode	Type	StateCode	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual union all
+select 'family.tsv'    file_name, 'FAMILY_STAGING'    staging_table_name,   615 min_expected_rows, 'https://planet4589.org/space/gcat/data/tables/family.tsv'   url, '#Family' from dual union all
+select 'lv.tsv'        file_name, 'LV_STAGING'        staging_table_name,  1660 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/lv.tsv'        url, '#LV_Name	LV_Family	LV_Manufacturer	LV_Variant	LV_Alias	LV_Min_Stage	LV_Max_Stage	Length	LFlag	Diameter	DFlag	Launch_Mass	MFlag	LEO_Capacity	GTO_Capacity	TO_Thrust	Class	Apogee	Range' from dual union all
+select 'refs.tsv'      file_name, 'REFS_STAGING'      staging_table_name,  3050 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/refs.tsv'      url, '#Cite	Reference' from dual union all
+select 'satcat.tsv'    file_name, 'SATCAT_STAGING'    staging_table_name, 50850 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/satcat.tsv'       url, '#JCAT	Satcat	Piece	Type	Name	PLName	LDate	Parent	SDate	Primary	DDate	Status	Dest	Owner	State	Manufacturer	Bus	Motor	Mass	MassFlag	DryMass	DryFlag	TotMass	TotFlag	Length	LFlag	Diameter	DFlag	Span	SpanFlag	Shape	ODate	Perigee	PF	Apogee	AF	Inc	IF	OpOrbit	OQUAL	AltNames' from dual union all
+select 'worlds.tsv'    file_name, 'WORLDS_STAGING'    staging_table_name,   285 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/worlds/worlds.tsv'    url, '#IDT	IDName	Name	AltName	Radius	PolarRadius	Mass	SemiMajorAxis	Periapsis	Ecc	Inc	Node	Peri	M	Epoch	RotPeriod	OrbPeriod	Ephemeris	WType	Primary' from dual union all
+select 'spin.tsv'      file_name, 'SPIN_STAGING'      staging_table_name,    70 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/worlds/spin.tsv'      url, '#IDT	IDName	Name	Rho	IFac	PoleRA	PoleDec	Meridian	SpinRate	J2	J4	J6	PoleRARate	PoleDecDec	PoleFunc	SpinFunc	InitFunc	JFile' from dual
 order by file_name;
 
 
@@ -166,305 +171,7 @@ Test database link:
 --------------------------------------------------------------------------------
 -- Create helper objects - one time step.
 --------------------------------------------------------------------------------
-
-create or replace package gcat_helper authid current_user is
-	c_version constant varchar2(10) := '0.0.1';
-
-	--This list is in an order that could be used to create objets.
-	--The order matters because of foreign key constraints.
-	--Use the reverse order to drop them.
-	c_ordered_objects constant sys.odcivarchar2list := sys.odcivarchar2list
-	(
-		'ORGANIZATION_CLASS',
-		'ORGANIZATION_TYPE',
-		'ORGANIZATION',
-		'PLATFORM',
-		'PLATFORM_ORG',
-		'ORGANIZATION_ORG_TYPE',
-		'SITE',
-		'SITE_ORG',
-		'LAUNCH_POINT',
-		'LAUNCH_POINT_ORG',
-		'LAUNCH_VEHICLE_FAMILY',
-		'LAUNCH_VEHICLE',
-		'LAUNCH_VEHICLE_ORG',
-		'REFERENCE',
-		'LAUNCH',
-		'LAUNCH_AGENCY_ORG',
-		'LAUNCH_PAYLOAD_ORG',
-		'LAUNCH_INVESTIGATOR',
-		'SATELLITE',
-		'SATELLITE_ORG',
-		'ENGINE',
-		'STAGE',
-		'LAUNCH_VEHICLE_STAGE',
-		'STAGE_MANUFACTURER',
-		'PROPELLANT',
-		'ENGINE_PROPELLANT',
-		'ENGINE_MANUFACTURER'
-	);
-
-	function file_to_blob (p_dir in varchar2, p_filename in varchar2) return blob;
-	function get_nt_from_list(p_list in varchar2, p_delimiter in varchar2) return sys.odcivarchar2list;
-	procedure vague_date_and_precision(p_date_string in varchar2, p_date out date, p_precision out varchar2);
-	function vague_to_date(p_date_string in varchar2) return date;
-	function vague_to_precision(p_date_string in varchar2) return varchar2;
-	function gcat_to_number(p_number_string varchar2) return number;
-	function convert_null_and_trim(p_string in varchar2) return varchar2;
-end gcat_helper;
-/
-
-create or replace package body gcat_helper is
-
-	---------------------------------------
-	-- Purpose: Safely convert the vague date format into an Oracle date and precision.
-	-- (TODO: Should I use a timestamp? Do any vague dates have millisecond precision?)
-	procedure vague_date_and_precision
-	(
-		p_date_string in  varchar2,
-		p_date        out date,
-		p_precision   out varchar2
-	) is
-		v_date_string varchar2(4000);
-		v_has_question_mark boolean := false;
-	begin
-
-		--Find and remove question mark, if it exists.
-		if p_date_string like '%?' then
-			v_date_string := substr(p_date_string, 1, length(p_date_string)-1);
-			v_has_question_mark := true;
-		else
-			v_date_string := p_date_string;
-			v_has_question_mark := false;
-		end if;
-
-		--If the date only has 3 digits for a year, add a digit to the front.
-		if regexp_like(v_date_string, '^[0-9][0-9][0-9]$') or regexp_like(v_date_string, '^[0-9][0-9][0-9] %') then
-			v_date_string := '0' || v_date_string;
-		end if;
-
-		--Find the correct formt, looking from largest to smallest value.
-		if v_date_string is null or v_date_string = '-' or v_date_string = '*' then
-			null;
-		elsif v_date_string like '%M' then
-			v_date_string := replace(v_date_string, 'M');
-			p_date := to_date(to_char((to_number(v_date_string) - 1) * 1000) || '-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
-			if v_has_question_mark then
-				p_precision := 'Millenia';
-			else
-				p_precision := 'Millenium';
-			end if;
-		elsif v_date_string like '%C' then
-			v_date_string := replace(v_date_string, 'C');
-			p_date := to_date(to_char((to_number(v_date_string) * 100) - 100) || '-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
-			if v_has_question_mark then
-				p_precision := 'Centuries';
-			else
-				p_precision := 'Century';
-			end if;
-		elsif v_date_string like '%s' then
-			v_date_string := replace(v_date_string, 's');
-			p_date := to_date(to_char(to_number(v_date_string)) || '-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
-			if v_has_question_mark then
-				p_precision := 'Decades';
-			else
-				p_precision := 'Decade';
-			end if;
-/*
-		elsif regexp_like(v_date_string, '^[0-9][0-9][0-9]$') then
-			p_date := to_date(to_char(to_number(v_date_string)) || '-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
-			if v_has_question_mark then
-				p_precision := 'Years';
-			else
-				p_precision := 'Year';
-			end if;
-*/
-		elsif length(v_date_string) = 4 then
-			v_date_string := replace(v_date_string, 's');
-			p_date := to_date(to_char(to_number(v_date_string)) || '-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
-			if v_has_question_mark then
-				p_precision := 'Years';
-			else
-				p_precision := 'Year';
-			end if;
-		elsif v_date_string like '%Q%' then
-			if v_date_string like '%Q1' then
-				p_date := to_date(to_char(to_number(substr(v_date_string, 1, 4))) || '-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
-			elsif v_date_string like '%Q2' then
-				p_date := to_date(to_char(to_number(substr(v_date_string, 1, 4))) || '-04-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
-			elsif v_date_string like '%Q3' then
-				p_date := to_date(to_char(to_number(substr(v_date_string, 1, 4))) || '-07-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
-			elsif v_date_string like '%Q4' then
-				p_date := to_date(to_char(to_number(substr(v_date_string, 1, 4))) || '-10-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS');
-			end if;
-			if v_has_question_mark then
-				p_precision := 'Quarters';
-			else
-				p_precision := 'Quarter';
-			end if;
-		elsif length(v_date_string) = 8 then
-			p_date := to_date(v_date_string || ' 01 00:00:00', 'YYYY Mon DD HH24:MI:SS');
-			if v_has_question_mark then
-				p_precision := 'Months';
-			else
-				p_precision := 'Month';
-			end if;
-		elsif length(v_date_string) in (10, 11) and v_date_string not like '%.%' then
-			p_date := to_date(v_date_string || ' 00:00:00', 'YYYY Mon DD HH24:MI:SS');
-			if v_has_question_mark then
-				p_precision := 'Days';
-			else
-				p_precision := 'Day';
-			end if;
-		elsif v_date_string like '%h%' then
-			v_date_string := replace(v_date_string, 'h');
-			p_date := to_date(v_date_string || ':00:00', 'YYYY Mon DD HH24:MI:SS');
-			if v_has_question_mark then
-				p_precision := 'Hours';
-			else
-				p_precision := 'Hour';
-			end if;
-		elsif length(v_date_string) = 13 then
-			p_date :=
-				to_date(substr(v_date_string, 1, length(v_date_string)-2) || ' 00:00:00', 'YYYY Mon DD HH24:MI:SS')
-				+ numToDSInterval(1440 * to_number(substr(v_date_string, -2, 2)), 'MINUTE');
-			if v_has_question_mark then
-				p_precision := 'Hours';
-			else
-				p_precision := 'Hour';
-			end if;
-		elsif length(v_date_string) = 14 then
-			p_date :=
-				to_date(substr(v_date_string, 1, length(v_date_string)-3) || ' 00:00:00', 'YYYY Mon DD HH24:MI:SS')
-				+ numToDSInterval(24*60*60 * to_number(substr(v_date_string, -3, 3)), 'SECOND');
-			if v_has_question_mark then
-				p_precision := 'Centidays';
-			else
-				p_precision := 'Centiday';
-			end if;
-		elsif length(v_date_string) = 16 then
-			p_date := to_date(v_date_string || ':00', 'YYYY Mon DD HH24:MI:SS');
-			if v_has_question_mark then
-				p_precision := 'Minutes';
-			else
-				p_precision := 'Minute';
-			end if;
-		elsif length(v_date_string) = 19 then
-			v_date_string := replace(v_date_string, 'h');
-			p_date := to_date(v_date_string, 'YYYY Mon DD HH24:MI:SS');
-			if v_has_question_mark then
-				p_precision := 'Seconds';
-			else
-				p_precision := 'Second';
-			end if;
-		--Note: Millisecond not yet implemented - may require conversion to timestamp.
-		else
-			raise_application_error(-20000, 'Unexpected vague date format: ' || p_date_string);
-		end if;
-	exception when others then
-		raise_application_error(-20000, 'Vague date format error with this date string: ' || p_date_string || chr(10) || sqlerrm);
-	end vague_date_and_precision;
-
-
-	---------------------------------------
-	-- Purpose: Safely convert the vague date format into an Oracle date.
-	function vague_to_date(p_date_string in varchar2) return date is
-		v_date      date;
-		v_precision varchar2(4000);
-	begin
-		vague_date_and_precision(p_date_string, v_date, v_precision);
-		return v_date;
-	end vague_to_date;
-
-
-	---------------------------------------
-	-- Purpose: Safely get the precision from a vague date.
-	function vague_to_precision(p_date_string in varchar2) return varchar2 is
-		v_date      date;
-		v_precision varchar2(4000);
-	begin
-		vague_date_and_precision(p_date_string, v_date, v_precision);
-		return v_precision;
-	end vague_to_precision;
-
-
-	---------------------------------------
-	-- Purpose: Convert a file to a BLOB so it can be used by APEX_DATA_PARSER.
-	-- Based on https://oracle-base.com/articles/misc/apex_data_parser
-	function file_to_blob (p_dir in varchar2, p_filename in varchar2) return blob
-	as
-		l_bfile  bfile;
-		l_blob   blob;
-		l_dest_offset integer := 1;
-		l_src_offset  integer := 1;
-	begin
-		l_bfile := bfilename(p_dir, p_filename);
-		dbms_lob.fileopen(l_bfile, dbms_lob.file_readonly);
-		dbms_lob.createtemporary(l_blob, false);
-		if dbms_lob.getlength(l_bfile) > 0 then
-		dbms_lob.loadblobfromfile (
-			dest_lob    => l_blob,
-			src_bfile   => l_bfile,
-			amount      => dbms_lob.lobmaxsize,
-			dest_offset => l_dest_offset,
-			src_offset  => l_src_offset);
-		end if;
-		dbms_lob.fileclose(l_bfile);
-		return l_blob;
-	end file_to_blob;
-
-
-	-- Purpose: Split a list of strings into a nested table of string.
-	function get_nt_from_list
-	(
-		p_list in varchar2,
-		p_delimiter in varchar2
-	) return sys.odcivarchar2list is
-		v_index number := 0;
-		v_item varchar2(32767);
-		v_results sys.odcivarchar2list := sys.odcivarchar2list();
-	begin
-		--Split.
-		loop
-			v_index := v_index + 1;
-			v_item := regexp_substr(p_list, '[^' || p_delimiter || ']+', 1, v_index);
-			exit when v_item is null;
-			v_results.extend;
-			v_results(v_results.count) := v_item;
-		end loop;
-
-		return v_results;
-	end get_nt_from_list;
-
-
-	---------------------------------------
-	-- Purpose: Convert numbers.
-	function gcat_to_number(p_number_string varchar2) return number is
-	begin
-		if p_number_string = '-' then
-			return null;
-		end if;
-
-		return to_char(p_number_string);
-	exception when others then
-		raise_application_error(-20000, 'Error converting this string to a number: ' || p_number_string || chr(10) || sqlerrm);
-	end gcat_to_number;
-
-
-	---------------------------------------
-	-- Purpose: Convert a GCAT NULL, a dash, to a database NULL, and remove leading and trailing whitespace.
-	function convert_null_and_trim(p_string in varchar2) return varchar2 is
-		pragma udf;
-	begin
-		if p_string = '-' then
-			return null;
-		else
-			return trim(p_string);
-		end if;
-	end convert_null_and_trim;
-
-end gcat_helper;
-/
+@gcat_helper.pck
 
 
 
@@ -612,23 +319,17 @@ begin
 	--Run the job for each file.
 	for files in
 	(
-		select file_name
+		select *
 		from gcat_config_vw
 		--TEMP for TESTING - only use one file.
-		where file_name = 'refs.tsv'
+		--where file_name = 'satcat.tsv'
+		where file_name in ('worlds.tsv', 'spin.tsv')
 		order by file_name
 	) loop
 		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 1, argument_value => '--output');
 		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 2, argument_value => v_directory_path || '/' || files.file_name);
 		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 3, argument_value => '--url');
-		--Exception for one file in wrong directory.
-		if files.file_name = 'family.tsv' then
-			dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 4, argument_value => 'https://planet4589.org/space/gcat/data/tables/family.tsv');
-		elsif files.file_name = 'launch.tsv' then
-			dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 4, argument_value => 'https://planet4589.org/space/gcat/tsv/launch/launch.tsv');
-		else
-			dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 4, argument_value => 'https://planet4589.org/space/gcat/tsv/tables/' || files.file_name);
-		end if;			
+		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 4, argument_value => files.url);
 		dbms_scheduler.run_job(v_name);
 	end loop;
 end;
@@ -837,23 +538,6 @@ end;
 --------------------------------------------------------------------------------
 
 
---ORGANIZATION_CLASS:
-create table organization_class compress as
-select cast(oc_code as varchar2(1)) oc_code, oc_description
-from
-(
-	select 'A' oc_code, 'Academic, amateur and non-profit' oc_description from dual union all
-	select 'B' oc_code, 'Business/commercial'              oc_description from dual union all
-	select 'C' oc_code, 'Civil government'                 oc_description from dual union all
-	select 'D' oc_code, 'Defense/military/intelligence'    oc_description from dual union all
-	--Fix: "E" and "O" are not in https://planet4589.org/space/gcat/web/orgs/index.html
-	select 'E' oc_code, 'Engine/motor manufacturer'        oc_description from dual union all
-	select 'O' oc_code, 'Other'                            oc_description from dual
-);
-
-alter table organization_class add constraint pk_organization_class primary key(oc_code);
-
-
 --ORGANIZATION_TYPE:
 create table organization_type compress as
 select 'CY'  ot_code, 'Country (i.e. nation-state or autonomous region)'                                                                                              ot_description, 'States and similar entities' ot_group from dual union all
@@ -878,7 +562,7 @@ alter table organization_type add constraint pk_organization_type primary key (o
 
 --ORGANIZATION:
 create table organization compress as
-select o_code, o_ucode, o_state_code, o_type, o_oc_code,
+select o_code, o_ucode, o_state_code, o_type, o_class,
 	gcat_helper.vague_to_date(o_tstart) o_tstart,
 	gcat_helper.vague_to_precision(o_tstart) o_tstart_precision,
 	gcat_helper.vague_to_date(o_tstop) o_tstop,
@@ -901,7 +585,7 @@ from
 		o_ucode,
 		o_state_code,
 		o_type,
-		o_oc_code,
+		o_class,
 		o_tstart,
 		replace(o_tstop, '2015 Feb ?', '2015 Feb?') o_tstop,
 		o_short_name,
@@ -927,7 +611,7 @@ from
 			gcat_helper.convert_null_and_trim("UCode"     ) o_ucode,
 			gcat_helper.convert_null_and_trim("StateCode" ) o_state_code,
 			gcat_helper.convert_null_and_trim("Type"      ) o_type,
-			gcat_helper.convert_null_and_trim("Class"     ) o_oc_code,
+			gcat_helper.convert_null_and_trim("Class"     ) o_class,
 			gcat_helper.convert_null_and_trim("TStart"    ) o_tstart,
 			gcat_helper.convert_null_and_trim("TStop"     ) o_tstop,
 			gcat_helper.convert_null_and_trim("ShortName" ) o_short_name,
@@ -946,7 +630,6 @@ from
 
 alter table organization add constraint pk_organization primary key(o_code);
 alter table organization add constraint fk_organization_organization foreign key (o_parent_o_code) references organization(o_code);
-alter table organization add constraint fk_organization_organization_class foreign key (o_oc_code) references organization_class(oc_code);
 
 
 --ORGANIZATION_ORG_TYPE
@@ -1046,7 +729,7 @@ alter table site_org add constraint fk_site_org_org foreign key(so_o_code) refer
 
 --PLATFORM
 create table platform compress as
-select p_code, p_ucode, p_state_code, p_type, p_oc_code,
+select p_code, p_ucode, p_state_code, p_type, p_class,
 	gcat_helper.vague_to_date(p_tstart) p_tstart,
 	gcat_helper.vague_to_precision(p_tstart) p_tstart_precision,
 	gcat_helper.vague_to_date(p_tstop) p_tstop,
@@ -1072,7 +755,7 @@ from
 		p_ucode,
 		p_state_code,
 		p_type,
-		p_oc_code,
+		p_class,
 		p_tstart,
 		p_tstop,
 		p_short_name,
@@ -1096,7 +779,7 @@ from
 			gcat_helper.convert_null_and_trim("UCode"     ) p_ucode,
 			gcat_helper.convert_null_and_trim("StateCode" ) p_state_code,
 			gcat_helper.convert_null_and_trim("Type"      ) p_type,
-			gcat_helper.convert_null_and_trim("Class"     ) p_oc_code,
+			gcat_helper.convert_null_and_trim("Class"     ) p_class,
 			gcat_helper.convert_null_and_trim("TStart"    ) p_tstart,
 			gcat_helper.convert_null_and_trim("TStop"     ) p_tstop,
 			gcat_helper.convert_null_and_trim("ShortName" ) p_short_name,
@@ -1117,7 +800,6 @@ from
 ) fix_data;
 
 alter table platform add constraint pk_platform primary key(p_code);
-alter table platform add constraint fk_platform_organization_class foreign key (p_oc_code) references organization_class(oc_code);
 
 
 --PLATFORM_ORG
@@ -1221,19 +903,19 @@ alter table launch_point_org add constraint fk_launch_point_org_org foreign key(
 --LAUNCH_VEHICLE_FAMILY
 create table launch_vehicle_family compress as
 --FIX: Added distinct because there are duplicates.
-select distinct "Family" lv_family
+select distinct "Family" lvf_family
 from family_staging
 where "Family" <> '-'
 order by 1;
 
-alter table launch_vehicle_family add constraint pk_launch_vehicle_family primary key(lv_family);
+alter table launch_vehicle_family add constraint pk_launch_vehicle_family primary key(lvf_family);
 
 
 --LAUNCH_VEHICLE
 create table launch_vehicle compress as
 select
 	cast(lv_name as varchar2(1000)) lv_name,
-	lv_family,
+	lv_lvf_family,
 	lv_variant,
 	lv_alias,
 	gcat_helper.gcat_to_number(lv_min_stage) lv_min_stage,
@@ -1255,7 +937,7 @@ from
 	--Rename columns.
 	select
 		gcat_helper.convert_null_and_trim("LV_Name"        ) lv_name,
-		gcat_helper.convert_null_and_trim("LV_Family"      ) lv_family,
+		gcat_helper.convert_null_and_trim("LV_Family"      ) lv_lvf_family,
 		gcat_helper.convert_null_and_trim("LV_Variant"     ) lv_variant,
 		gcat_helper.convert_null_and_trim("LV_Alias"       ) lv_alias,
 		gcat_helper.convert_null_and_trim("LV_Min_Stage"   ) lv_min_stage,
@@ -1277,6 +959,7 @@ from
 
 --(Nullable column LV_VARIANT prevents primary key)
 alter table launch_vehicle add constraint uq_launch_vehicle unique(lv_name, lv_variant);
+alter table launch_vehicle add constraint fk_launch_vehicle_launch_vehicle_family foreign key (lv_lvf_family) references launch_vehicle_family(lvf_family);
 
 
 --LAUNCH_VEHICLE_ORG
@@ -1318,7 +1001,6 @@ alter table reference add constraint pk_reference primary key(r_cite);
 
 
 --LAUNCH
-drop table launch;
 create table launch nologging compress as
 select
 	l_launch_tag,
@@ -1361,8 +1043,14 @@ from
 			, '1971 Mar 24 1832:0', '1971 Mar 24 1832:00')
 			, '1971 Jul 31 2334:0', '1971 Jul 31 2334:00')
 		l_launch_date,
-		l_lv_name,
-		l_lv_variant,
+		--FIX:
+		case
+			when l_lv_name = 'Minotaur-C 3210' then 'Minotaur C'
+			when l_lv_name = 'Ghadr-110' then 'Ghadr 1'
+			when l_lv_name = 'Angara A5/Persei' then 'Angara A5'
+			else l_lv_name
+		end l_lv_name,
+		replace(l_lv_variant, '?') l_lv_variant,
 		l_flight_id,
 		l_flight,
 		l_mission,
@@ -1456,10 +1144,18 @@ alter table launch add constraint fk_launch_launch_site foreign key (l_launch_lp
 alter table launch add constraint fk_launch_launch_point  foreign key (l_launch_lp_s_code, l_launch_lp_code) references launch_point(lp_s_code, lp_code);
 alter table launch add constraint fk_launch_ascent_site foreign key (l_ascent_lp_s_code) references site(s_code);
 alter table launch add constraint fk_launch_ascent_point foreign key (l_ascent_lp_s_code, l_ascent_lp_code) references launch_point(lp_s_code, lp_code);
+alter table launch add constraint fk_launch_launch_vehicle foreign key (l_lv_name, l_lv_variant) references launch_vehicle(lv_name, lv_variant);
 
 /*
-
 --Keep these data checks - they may be useful if there are future error
+
+--Check the L_LV_NAME and L_LV_VARIANT matches LAUNCH_VEHICLE.
+select *
+from launch
+left join launch_vehicle
+	on l_lv_name = lv_name
+	and nvl(l_lv_variant, 'asdf') = nvl(lv_variant, 'asdf')
+where lv_name is null;
 
 --Check that "Launch_Site" matches site.s_code.
 select *
@@ -1589,9 +1285,215 @@ alter table launch_investigator add constraint pk_launch_investigator primary ke
 alter table launch_investigator add constraint fk_launch_investigator_launch foreign key(li_l_launch_tag) references launch(l_launch_tag);
 
 
+ORA-20000: Error converting this string to a number: 11.8576yr
+ORA-06502: PL/SQL: numeric or value error: character to number conversion error
+ORA-06512: at "JHELLER.GCAT_HELPER", line 264
 
---TODO: Vehicle?
-select * from launch_vehicle;
+View program sources of error stack?
+;
+
+ORA-20000: Vague date format error with this date string: 2017 Sep  4  0000:00
+ORA-20000: Unexpected vague date format: 2017 Sep  4  0000:00
+ORA-06512: at "JHELLER.GCAT_HELPER", line 199
+ORA-06512: at "JHELLER.GCAT_HELPER", line 209
+
+View program sources of error stack?
+
+
+--WORLD
+drop table world;
+create table world compress as
+select w_id, w_id_name, w_name, w_alternate_name,
+	gcat_helper.gcat_to_number(w_radius) w_radius,
+	gcat_helper.gcat_to_number(w_polar_radius) w_polar_radius,
+	gcat_helper.gcat_to_number(w_mass) w_mass,
+	gcat_helper.gcat_to_number(w_semimajor_axis) w_semimajor_axis,
+	gcat_helper.gcat_to_number(w_periapsis) w_periapsis,
+	gcat_helper.gcat_to_number(w_eccentricity) w_eccentricity,
+	gcat_helper.gcat_to_number(w_inclination) w_inclination,
+	gcat_helper.gcat_to_number(w_node) w_node,
+	gcat_helper.gcat_to_number(w_epoch_periapsis) w_epoch_periapsis,
+	gcat_helper.gcat_to_number(w_mean) w_mean,
+	gcat_helper.vague_to_date(w_epoch) w_epoch,
+	gcat_helper.vague_to_precision(w_epoch) w_epoch_precision,
+	gcat_helper.gcat_to_number(w_rotation_period) w_rotation_period,
+	gcat_helper.gcat_to_number(w_orbital_period) w_orbital_period,
+	w_ephemeris,
+	w_world_type,
+	w_primary_s_name
+from
+(
+	--Fix data issues.
+	select *
+	from
+	(
+		--Rename columns.
+		select
+			gcat_helper.convert_null_and_trim("IDT"          ) w_id,
+			gcat_helper.convert_null_and_trim("IDName"       ) w_id_name,
+			gcat_helper.convert_null_and_trim("Name"         ) w_name,
+			gcat_helper.convert_null_and_trim("AltName"      ) w_alternate_name,
+			gcat_helper.convert_null_and_trim("Radius"       ) w_radius,
+			gcat_helper.convert_null_and_trim("PolarRadius"  ) w_polar_radius,
+			gcat_helper.convert_null_and_trim("Mass"         ) w_mass,
+			gcat_helper.convert_null_and_trim("SemiMajorAxis") w_semimajor_axis,
+			gcat_helper.convert_null_and_trim("Periapsis"    ) w_periapsis,
+			gcat_helper.convert_null_and_trim("Ecc"          ) w_eccentricity,
+			gcat_helper.convert_null_and_trim("Inc"          ) w_inclination,
+			gcat_helper.convert_null_and_trim("Node"         ) w_node,
+			gcat_helper.convert_null_and_trim("Peri"         ) w_epoch_periapsis,
+			gcat_helper.convert_null_and_trim("M"            ) w_mean,
+			gcat_helper.convert_null_and_trim("Epoch"        ) w_epoch,
+			gcat_helper.convert_null_and_trim("RotPeriod"    ) w_rotation_period,
+			gcat_helper.convert_null_and_trim("OrbPeriod"    ) w_orbital_period,
+			gcat_helper.convert_null_and_trim("Ephemeris"    ) w_ephemeris,
+			gcat_helper.convert_null_and_trim("WType"        ) w_world_type,
+			gcat_helper.convert_null_and_trim("Primary"      ) w_primary_s_name
+		from worlds_staging
+		--FIX: Avoid some duplicate rows.
+		where ("IDName", "Mass") not in (('(47171)', '61200?'), ('(617)', '802'), ('(79360)', '46600?'), ('2017 OF69', '100000?'))
+	) rename_columns
+) fix_data
+;
+
+alter table world add constraint pk_platform primary key(p_code);
+
+
+select * from worlds_staging;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--SATELLITE
+drop table satellite;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+create table site compress as
+select p_code, p_ucode, p_state_code, p_type, p_class,
+
+	gcat_helper.vague_to_date(p_tstart) p_tstart,
+	gcat_helper.vague_to_precision(p_tstart) p_tstart_precision,
+
+	gcat_helper.gcat_to_number(p_longitude) p_longitude,
+from
+(
+	--Fix data issues.
+	select
+		p_code,
+	from
+	(
+;
+		--Rename columns.
+		select
+			gcat_helper.convert_null_and_trim("JCAT"              ) s_jcat,
+			gcat_helper.convert_null_and_trim("Satcat"            ) s_satcat,
+			gcat_helper.convert_null_and_trim("Piece"             ) s_piece,
+			gcat_helper.convert_null_and_trim(substr("Type", 1, 1)) s_type_byte_1,
+			gcat_helper.convert_null_and_trim(substr("Type", 2, 1)) s_type_byte_2,
+			gcat_helper.convert_null_and_trim(substr("Type", 3, 1)) s_type_byte_3,
+			gcat_helper.convert_null_and_trim(substr("Type", 4, 1)) s_type_byte_4,
+			gcat_helper.convert_null_and_trim(substr("Type", 5, 1)) s_type_byte_5,
+			gcat_helper.convert_null_and_trim(substr("Type", 6, 1)) s_type_byte_6,
+			gcat_helper.convert_null_and_trim(substr("Type", 7, 1)) s_type_byte_7,
+			gcat_helper.convert_null_and_trim(substr("Type", 8, 1)) s_type_byte_8,
+			gcat_helper.convert_null_and_trim(substr("Type", 9, 1)) s_type_byte_9,
+			gcat_helper.convert_null_and_trim("Type"              ) s_type_byte_9,
+			gcat_helper.convert_null_and_trim("Name"              ) s_name,
+			gcat_helper.convert_null_and_trim("PLName"            ) s_payload_name,
+			gcat_helper.convert_null_and_trim("LDate"             ) s_launch_date,
+			gcat_helper.convert_null_and_trim("Parent"            ) s_parent, --TODO: Point to any JCAT?
+			gcat_helper.convert_null_and_trim("SDate"             ) s_separation_date,
+			gcat_helper.convert_null_and_trim("Primary"           ) s_primary,
+			gcat_helper.convert_null_and_trim("DDate"             ) s_ddate,
+			gcat_helper.convert_null_and_trim("Status"            ) s_status,
+			gcat_helper.convert_null_and_trim("Dest"              ) s_dest,
+			gcat_helper.convert_null_and_trim("Owner"             ) s_owner,
+			gcat_helper.convert_null_and_trim("State"             ) s_state,
+			gcat_helper.convert_null_and_trim("Manufacturer"      ) s_manufacturer,
+			gcat_helper.convert_null_and_trim("Bus"               ) s_bus,
+			gcat_helper.convert_null_and_trim("Motor"             ) s_motor,
+			gcat_helper.convert_null_and_trim("Mass"              ) s_mass,
+			gcat_helper.convert_null_and_trim("MassFlag"          ) s_massflag,
+			gcat_helper.convert_null_and_trim("DryMass"           ) s_drymass,
+			gcat_helper.convert_null_and_trim("DryFlag"           ) s_dryflag,
+			gcat_helper.convert_null_and_trim("TotMass"           ) s_totmass,
+			gcat_helper.convert_null_and_trim("TotFlag"           ) s_totflag,
+			gcat_helper.convert_null_and_trim("Length"            ) s_length,
+			gcat_helper.convert_null_and_trim("LFlag"             ) s_lflag,
+			gcat_helper.convert_null_and_trim("Diameter"          ) s_diameter,
+			gcat_helper.convert_null_and_trim("DFlag"             ) s_dflag,
+			gcat_helper.convert_null_and_trim("Span"              ) s_span,
+			gcat_helper.convert_null_and_trim("SpanFlag"          ) s_spanflag,
+			gcat_helper.convert_null_and_trim("Shape"             ) s_shape,
+			gcat_helper.convert_null_and_trim("ODate"             ) s_odate,
+			gcat_helper.convert_null_and_trim("Perigee"           ) s_perigee,
+			gcat_helper.convert_null_and_trim("PF"                ) s_pf,
+			gcat_helper.convert_null_and_trim("Apogee"            ) s_apogee,
+			gcat_helper.convert_null_and_trim("AF"                ) s_af,
+			gcat_helper.convert_null_and_trim("Inc"               ) s_inc,
+			gcat_helper.convert_null_and_trim("IF"                ) s_if,
+			gcat_helper.convert_null_and_trim("OpOrbit"           ) s_oporbit,
+			gcat_helper.convert_null_and_trim("OQUAL"             ) s_oqual,
+			gcat_helper.convert_null_and_trim("AltNames"          ) s_altnames
+		from satcat_staging
+
+;
+
+	) rename_columns
+) fix_data;
+
+alter table platform add constraint pk_platform primary key(p_code);
+
+
+
+
+select * from satcat_staging;
+select * from space.satellite;
+
+
+
+SATELLITE
+SATELLITE_ORG
+
 
 
 
@@ -1616,9 +1518,6 @@ select * from user_constraints where r_constraint_name like '%PLATFORM%';
 
 /*
 TODO, in this order
-LAUNCH
-LAUNCH_PAYLOAD_ORG
-LAUNCH_AGENCY
 SATELLITE
 SATELLITE_ORG
 ENGINE
@@ -1734,7 +1633,6 @@ end;
 --------------------------------------------------------------------------------
 -- Populate cloud database.
 --------------------------------------------------------------------------------
-
 
 
 -- Create public synonyms and grants.
@@ -1909,9 +1807,7 @@ begin
 end;
 /
 
-
 select replace(dbms_metadata.get_ddl('TABLE', 'ORGANIZATION_CLASS') ,'"'||user||'"', '"GCAT"') from dual;
-
 
 begin
 	dbms_utility.exec_ddl_statement@gcat(
