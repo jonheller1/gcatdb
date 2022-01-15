@@ -171,7 +171,7 @@ Test database link:
 --------------------------------------------------------------------------------
 -- Create helper objects - one time step.
 --------------------------------------------------------------------------------
-@gcat_helper.pck
+@gcat_helper.pck;
 
 
 
@@ -217,42 +217,46 @@ begin
 	--These dates are mostly from the PDF document, with a few extra values for my own testing.
 	--Millisecond not yet implemented.
 	--v_date_string := trim('2016 Jun  8 2355:57.345'); vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun  8 2355:57    '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun  8 2355:57?   '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun  8 2355       '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun  8 2355?      '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun  8.98         '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun  8.98?        '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun  8 23h        '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun  8 23h?       '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun  8.9          '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun  8.9?         '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun 10.5          '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun 11.5?         '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun  8            '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun  8?           '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun 30            '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun 30?           '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun               '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Jun?              '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Q2                '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016 Q2?               '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016                   '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2016?                  '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2010s                  '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('2010s?                 '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('21C                    '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('21C?                   '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('3M                     '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('3M?                    '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	--Some weird dates from the ORGS file.
-	v_date_string := trim('700?                   '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('927 Jul 12             '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('?                      '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('                       '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('-                      '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
-	v_date_string := trim('*                      '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || to_char(v_date, 'YYYY-MM-DD HH24:MI:SS') || ', Precision out: ' || v_precision);
 
+	v_date_string := trim('2016 Jun  8 2355:57    '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8 2355:57?   '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8 2355       '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8 2355?      '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8.98         '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8.98?        '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8 23h        '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8 23h?       '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8.9          '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8.9?         '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun 10.5          '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun 11.5?         '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8            '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun  8?           '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun 30            '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun 30?           '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun               '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Jun?              '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Q2                '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016 Q2?               '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016                   '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2016?                  '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2010s                  '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('2010s?                 '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('21C                    '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('21C?                   '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('3M                     '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('3M?                    '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	--Some weird dates from the ORGS file.
+	v_date_string := trim('700?                   '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('927 Jul 12             '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('?                      '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('                       '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('-                      '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	v_date_string := trim('*                      '); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+
+	--My guess at what BC data will look like.
+	v_date_string := trim('BC 146 Jun 28'); gcat_helper.vague_date_and_precision(v_date_string, v_date, v_precision); dbms_output.put_line('Date in: ' || v_date_string || ', Date out: ' || trim(to_char(v_date, 'SYYYY-MM-DD HH24:MI:SS')) || ', Precision out: ' || v_precision);
+	--TODO: Other BC tests?
 end;
 /
 
@@ -1285,21 +1289,6 @@ alter table launch_investigator add constraint pk_launch_investigator primary ke
 alter table launch_investigator add constraint fk_launch_investigator_launch foreign key(li_l_launch_tag) references launch(l_launch_tag);
 
 
-ORA-20000: Error converting this string to a number: 11.8576yr
-ORA-06502: PL/SQL: numeric or value error: character to number conversion error
-ORA-06512: at "JHELLER.GCAT_HELPER", line 264
-
-View program sources of error stack?
-;
-
-ORA-20000: Vague date format error with this date string: 2017 Sep  4  0000:00
-ORA-20000: Unexpected vague date format: 2017 Sep  4  0000:00
-ORA-06512: at "JHELLER.GCAT_HELPER", line 199
-ORA-06512: at "JHELLER.GCAT_HELPER", line 209
-
-View program sources of error stack?
-
-
 --WORLD
 drop table world;
 create table world compress as
@@ -1320,11 +1309,26 @@ select w_id, w_id_name, w_name, w_alternate_name,
 	gcat_helper.gcat_to_number(w_orbital_period) w_orbital_period,
 	w_ephemeris,
 	w_world_type,
-	w_primary_s_name
+	w_primary_w_name
 from
 (
 	--Fix data issues.
-	select *
+	select
+		w_id, w_id_name,w_name,w_alternate_name,w_radius,w_polar_radius,w_mass,w_semimajor_axis,w_periapsis,w_eccentricity,w_inclination,w_node,w_epoch_periapsis,w_mean,
+		--FIX: Add BC for one date, and remove extra spaces for other dates.
+		case
+			when w_epoch = '0 Jun 28  0000:00' then 'BC 0146 Jun 28 0000:00'
+			else regexp_replace(w_epoch, '([0-9]+)(  )([0-9]+)', '\1 \3')
+		end w_epoch,
+		w_rotation_period,w_orbital_period,w_ephemeris,w_world_type,
+		--A null is considered Sol, per the documentation.
+		case
+			when w_primary_w_name is null then 'Sun'
+			--FIX
+			when w_primary_w_name = 'Sol' then 'Sun'
+			when w_primary_w_name = 'EMB' then 'Earth-Moon System'
+			else w_primary_w_name
+		end w_primary_w_name
 	from
 	(
 		--Rename columns.
@@ -1348,61 +1352,47 @@ from
 			gcat_helper.convert_null_and_trim("OrbPeriod"    ) w_orbital_period,
 			gcat_helper.convert_null_and_trim("Ephemeris"    ) w_ephemeris,
 			gcat_helper.convert_null_and_trim("WType"        ) w_world_type,
-			gcat_helper.convert_null_and_trim("Primary"      ) w_primary_s_name
+			gcat_helper.convert_null_and_trim("Primary"      ) w_primary_w_name
 		from worlds_staging
 		--FIX: Avoid some duplicate rows.
-		where ("IDName", "Mass") not in (('(47171)', '61200?'), ('(617)', '802'), ('(79360)', '46600?'), ('2017 OF69', '100000?'))
+		where ("IDName", "Mass") not in (('(47171)', '61200?'), ('(617)', '1360'), ('(79360)', '46600?'), ('2017 OF69', '100000?'))
 	) rename_columns
-) fix_data
-;
+) fix_data;
 
-alter table world add constraint pk_platform primary key(p_code);
+alter table world add constraint pk_world primary key(w_id_name);
 
-
-select * from worlds_staging;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+--Check for bad foreign keys. Anonymous block will do nothing if everything is fine,
+-- but it will raise an exception if there's a bad row.
+--
+--Ensure that every w_primary_w_name refers to one and only one world.
+--(This is weird because W_NAME is not unique.)
+begin
+	for bad_rows in
+	(
+		select *
+		from
+		(
+			select w1.w_id_name, w1.w_primary_w_name, w2.w_id_name w2_id_name,
+				count(*) over (partition by w1.w_id_name, w2.w_id_name) row_count,
+				case when w1.w_id_name is not null and w2.w_id_name is not null then 1 else 0 end has_match
+			from world w1
+			left join world w2
+				on w1.w_primary_w_name = w2.w_name
+		)
+		where row_count <> 1 or has_match = 0
+	) loop
+		if bad_rows.row_count >= 2 then
+			raise_application_error(-20000, 'The world "' || bad_rows.w_id_name || '" has multiple matches for "' || bad_rows.w_primary_w_name || '"');
+		elsif bad_rows.has_match = 0 then
+			raise_application_error(-20000, 'The world "' || bad_rows.w_id_name || '" has no matches for "' || bad_rows.w_primary_w_name || '"');
+		end if;
+	end loop;
+end;
+/
 
 
---SATELLITE
+--SATELLITE - TODO
 drop table satellite;
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
