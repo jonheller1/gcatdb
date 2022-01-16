@@ -36,6 +36,7 @@ Column names:
 Instances whewre GCAT text data does not perfectly map the relational model of the GCATDB:
 	Vague dates, which contain both date and precision, were converted to two separate columns to store the date and precision.
 	"sites.tsv"."Site" is stored as SITE.S_CODE. (While "sites.tsv" has an empty "Code" for backwards compatibility, the database prefers name consistency over text file backwards compatibility.
+	spin.tsv was combind into worlds.tsv to make a single WORLD table.
 
 Tables:
 	* - Completed.
@@ -1289,7 +1290,7 @@ alter table launch_investigator add constraint pk_launch_investigator primary ke
 alter table launch_investigator add constraint fk_launch_investigator_launch foreign key(li_l_launch_tag) references launch(l_launch_tag);
 
 
---WORLD
+--WORLD (including spin data)
 drop table world;
 create table world compress as
 select w_id, w_id_name, w_name, w_alternate_name,
@@ -1309,7 +1310,22 @@ select w_id, w_id_name, w_name, w_alternate_name,
 	gcat_helper.gcat_to_number(w_orbital_period) w_orbital_period,
 	w_ephemeris,
 	w_world_type,
-	w_primary_w_name
+	w_primary_w_name,
+	gcat_helper.gcat_to_number(w_spin_rho) w_spin_rho,
+	gcat_helper.gcat_to_number(w_spin_intertial_factor) w_spin_intertial_factor,
+	gcat_helper.gcat_to_number(w_spin_icrs_position_ra) w_spin_icrs_position_ra,
+	gcat_helper.gcat_to_number(w_spin_icrs_position_dec) w_spin_icrs_position_dec,
+	gcat_helper.gcat_to_number(w_spin_meridian) w_spin_meridian,
+	gcat_helper.gcat_to_number(w_spin_rate) w_spin_rate,
+	gcat_helper.gcat_to_number(w_spin_j2) w_spin_j2,
+	gcat_helper.gcat_to_number(w_spin_j4) w_spin_j4,
+	gcat_helper.gcat_to_number(w_spin_j6) w_spin_j6,
+	gcat_helper.gcat_to_number(w_spin_pole_ra_rate) w_spin_pole_ra_rate,
+	gcat_helper.gcat_to_number(w_spin_pole_dec_rate) w_spin_pole_dec_rate,
+	w_spin_pole_function,
+	w_spin_spin_function,
+	w_spin_init_function,
+	w_spin_jfile
 from
 (
 	--Fix data issues.
@@ -1328,10 +1344,12 @@ from
 			when w_primary_w_name = 'Sol' then 'Sun'
 			when w_primary_w_name = 'EMB' then 'Earth-Moon System'
 			else w_primary_w_name
-		end w_primary_w_name
+		end w_primary_w_name,
+		w_spin_rho,w_spin_intertial_factor,w_spin_icrs_position_ra,w_spin_icrs_position_dec,w_spin_meridian,w_spin_rate,w_spin_j2,w_spin_j4,
+		w_spin_j6,w_spin_pole_ra_rate,w_spin_pole_dec_rate,w_spin_pole_function,w_spin_spin_function,w_spin_init_function,w_spin_jfile
 	from
 	(
-		--Rename columns.
+		--Rename world columns.
 		select
 			gcat_helper.convert_null_and_trim("IDT"          ) w_id,
 			gcat_helper.convert_null_and_trim("IDName"       ) w_id_name,
@@ -1356,13 +1374,37 @@ from
 		from worlds_staging
 		--FIX: Avoid some duplicate rows.
 		where ("IDName", "Mass") not in (('(47171)', '61200?'), ('(617)', '1360'), ('(79360)', '46600?'), ('2017 OF69', '100000?'))
-	) rename_columns
+	) world
+	left join
+	(
+		--Rename spin columns.
+		select
+			gcat_helper.convert_null_and_trim("IDName"    ) spin_id_name,
+			gcat_helper.convert_null_and_trim("Rho"       ) w_spin_rho,
+			gcat_helper.convert_null_and_trim("IFac"      ) w_spin_intertial_factor,
+			gcat_helper.convert_null_and_trim("PoleRA"    ) w_spin_icrs_position_ra,
+			gcat_helper.convert_null_and_trim("PoleDec"   ) w_spin_icrs_position_dec,
+			gcat_helper.convert_null_and_trim("Meridian"  ) w_spin_meridian,
+			gcat_helper.convert_null_and_trim("SpinRate"  ) w_spin_rate,
+			gcat_helper.convert_null_and_trim("J2"        ) w_spin_j2,
+			gcat_helper.convert_null_and_trim("J4"        ) w_spin_j4,
+			gcat_helper.convert_null_and_trim("J6"        ) w_spin_j6,
+			gcat_helper.convert_null_and_trim("PoleRARate") w_spin_pole_ra_rate,
+			gcat_helper.convert_null_and_trim("PoleDecDec") w_spin_pole_dec_rate,
+			gcat_helper.convert_null_and_trim("PoleFunc"  ) w_spin_pole_function,
+			gcat_helper.convert_null_and_trim("SpinFunc"  ) w_spin_spin_function,
+			gcat_helper.convert_null_and_trim("InitFunc"  ) w_spin_init_function,
+			gcat_helper.convert_null_and_trim("JFile"     ) w_spin_jfile
+		from spin_staging
+	) spin
+		on world.w_id_name = spin.spin_id_name
 ) fix_data;
 
 alter table world add constraint pk_world primary key(w_id_name);
 
---Check for bad foreign keys. Anonymous block will do nothing if everything is fine,
--- but it will raise an exception if there's a bad row.
+
+--Check for bad foreign keys.
+-- Block will raise an exception if there's a bad row, else it will do nothing.
 --
 --Ensure that every w_primary_w_name refers to one and only one world.
 --(This is weird because W_NAME is not unique.)
@@ -1387,6 +1429,20 @@ begin
 			raise_application_error(-20000, 'The world "' || bad_rows.w_id_name || '" has no matches for "' || bad_rows.w_primary_w_name || '"');
 		end if;
 	end loop;
+end;
+/
+
+--Check that all spin rows loaded by comparing Rho count with Row count.
+-- Block will raise an exception if there's a bad row, else it will do nothing.
+declare
+	v_rho_count number;
+	v_row_count number;
+begin
+	select count(*) into v_rho_count from world where w_spin_rho is not null;
+	select count(*) into v_row_count from spin_staging;
+	if v_rho_count <> v_row_count then
+		raise_application_error(-20000, 'One or more row in staging did not match to a row in world.');
+	end if;
 end;
 /
 
