@@ -39,7 +39,6 @@ Instances whewre GCAT text data does not perfectly map the relational model of t
 	spin.tsv was combind into worlds.tsv to make a single WORLD table.
 
 Tables:
-	* - Completed.
 
 
 LAUNCH
@@ -81,7 +80,6 @@ LAUNCH_VEHICLE_STAGE
 REFERENCE
 
 WORLD
-SPIN
 ;
 
 
@@ -115,7 +113,7 @@ order by file_name;
 
 Create Oracle Cloud account.
 
-Open this link to see the login screen: https://console.us-ashburn-1.oraclecloud.com/db/adb
+Open this link to see the login screen: https://cloud.oracle.com/db/adb?region=us-ashburn-1
 
 Choose oracleidentitycloudservice and click Continue to enter password.
 
@@ -1448,26 +1446,126 @@ end;
 
 
 --SATELLITE - TODO
-drop table satellite;
+drop table satellite purge;
+
+select * from satcat_staging where "Apogee" = 'Inf';
 
 
-
-
-create table site compress as
-select p_code, p_ucode, p_state_code, p_type, p_class,
-
-	gcat_helper.vague_to_date(p_tstart) p_tstart,
-	gcat_helper.vague_to_precision(p_tstart) p_tstart_precision,
-
-	gcat_helper.gcat_to_number(p_longitude) p_longitude,
+create table satellite compress as
+select
+	s_jcat,
+	s_satcat,
+	s_piece,
+	s_type_byte_1,
+	s_type_byte_2,
+	s_type_byte_3,
+	s_type_byte_4,
+	s_type_byte_5,
+	s_type_byte_6,
+	s_type_byte_7,
+	s_type_byte_8,
+	s_type_byte_9,
+	s_name,
+	s_payload_name,
+	gcat_helper.vague_to_date(s_launch_date) s_launch_date,
+	gcat_helper.vague_to_precision(s_launch_date) s_launch_date_precision,
+	s_parent,
+	gcat_helper.vague_to_date(s_separation_date) s_separation_date,
+	gcat_helper.vague_to_precision(s_separation_date) s_separation_date_precision,
+	s_primary_w_name,
+	gcat_helper.vague_to_date(s_destination_date) s_destination_date,
+	gcat_helper.vague_to_precision(s_destination_date) s_destination_date_precision,
+	s_status_phase,
+	s_destination,
+	s_state_o_code,
+	s_bus,
+	s_motor,
+	gcat_helper.gcat_to_number(s_mass) s_mass,
+	s_mass_flag,
+	gcat_helper.gcat_to_number(s_dry_mass) s_dry_mass,
+	s_dry_mass_flag,
+	gcat_helper.gcat_to_number(s_total_mass) s_total_mass,
+	s_total_mass_flag,
+	gcat_helper.gcat_to_number(s_length) s_length,
+	s_lenght_flag,
+	gcat_helper.gcat_to_number(s_diameter) s_diameter,
+	s_diameter_flag,
+	gcat_helper.gcat_to_number(s_span) s_span,
+	s_span_flag,
+	s_shape,
+	gcat_helper.vague_to_date(s_orbit_epoch_date) s_orbit_epoch_date,
+	gcat_helper.vague_to_precision(s_orbit_epoch_date) s_orbit_epoch_date_precision,
+	gcat_helper.gcat_to_number(s_perigee) s_perigee,
+	s_perigee_flag,
+	gcat_helper.gcat_to_number(s_apogee) s_apogee,
+	s_apogee_flag,
+	gcat_helper.gcat_to_number(s_inclination) s_inclination,
+	s_inclination_flag,
+	s_orbit_type,
+	s_orbit_quality,
+	s_alternate_names
 from
 (
 	--Fix data issues.
 	select
-		p_code,
+		s_jcat,
+		s_satcat,
+		s_piece,
+		s_type_byte_1,
+		s_type_byte_2,
+		s_type_byte_3,
+		s_type_byte_4,
+		s_type_byte_5,
+		s_type_byte_6,
+		s_type_byte_7,
+		s_type_byte_8,
+		s_type_byte_9,
+		s_name,
+		s_payload_name,
+		s_launch_date,
+		s_parent,
+		s_separation_date,
+		s_primary_w_name,
+		case
+			when s_destination_date = '2011 Jun   2' then '2011 Jun  2'
+			when s_destination_date = '2014 Jan   2' then '2014 Jan  2'
+			when s_destination_date = '2011 Mar  10' then '2011 Mar 10'
+			when s_destination_date = '2014 Dec   2' then '2014 Dec  2'
+			when s_destination_date = '2015 Feb   5' then '2015 Feb  5'
+			when s_destination_date = '2020 Oct  15' then '2020 Oct 15'
+			when s_destination_date = '2021 Sep  10 0900?' then '2021 Sep 10 0900?'
+			else s_destination_date
+		end s_destination_date,
+		s_status_phase,
+		s_destination,
+		s_state_o_code,
+		s_bus,
+		s_motor,
+		s_mass,
+		s_mass_flag,
+		s_dry_mass,
+		s_dry_mass_flag,
+		s_total_mass,
+		s_total_mass_flag,
+		s_length,
+		s_lenght_flag,
+		s_diameter,
+		s_diameter_flag,
+		s_span,
+		s_span_flag,
+		s_shape,
+		s_orbit_epoch_date,
+		s_perigee,
+		s_perigee_flag,
+		s_apogee,
+		s_apogee_flag,
+		s_inclination,
+		s_inclination_flag,
+		s_orbit_type,
+		s_orbit_quality,
+		s_alternate_names
 	from
 	(
-;
 		--Rename columns.
 		select
 			gcat_helper.convert_null_and_trim("JCAT"              ) s_jcat,
@@ -1482,53 +1580,52 @@ from
 			gcat_helper.convert_null_and_trim(substr("Type", 7, 1)) s_type_byte_7,
 			gcat_helper.convert_null_and_trim(substr("Type", 8, 1)) s_type_byte_8,
 			gcat_helper.convert_null_and_trim(substr("Type", 9, 1)) s_type_byte_9,
-			gcat_helper.convert_null_and_trim("Type"              ) s_type_byte_9,
 			gcat_helper.convert_null_and_trim("Name"              ) s_name,
 			gcat_helper.convert_null_and_trim("PLName"            ) s_payload_name,
 			gcat_helper.convert_null_and_trim("LDate"             ) s_launch_date,
-			gcat_helper.convert_null_and_trim("Parent"            ) s_parent, --TODO: Point to any JCAT?
+			gcat_helper.convert_null_and_trim("Parent"            ) s_parent, --TODO: 	"the parent can be an extended JCAT ID (EJCAT) or a body name."
 			gcat_helper.convert_null_and_trim("SDate"             ) s_separation_date,
-			gcat_helper.convert_null_and_trim("Primary"           ) s_primary,
-			gcat_helper.convert_null_and_trim("DDate"             ) s_ddate,
-			gcat_helper.convert_null_and_trim("Status"            ) s_status,
-			gcat_helper.convert_null_and_trim("Dest"              ) s_dest,
-			gcat_helper.convert_null_and_trim("Owner"             ) s_owner,
-			gcat_helper.convert_null_and_trim("State"             ) s_state,
-			gcat_helper.convert_null_and_trim("Manufacturer"      ) s_manufacturer,
+			gcat_helper.convert_null_and_trim("Primary"           ) s_primary_w_name,
+			gcat_helper.convert_null_and_trim("DDate"             ) s_destination_date,
+			gcat_helper.convert_null_and_trim("Status"            ) s_status_phase,
+			gcat_helper.convert_null_and_trim("Dest"              ) s_destination,
+			gcat_helper.convert_null_and_trim("State"             ) s_state_o_code, --TODO: Add foreign key
 			gcat_helper.convert_null_and_trim("Bus"               ) s_bus,
-			gcat_helper.convert_null_and_trim("Motor"             ) s_motor,
+			gcat_helper.convert_null_and_trim("Motor"             ) s_motor, --TODO: Convert to E_CODE?
 			gcat_helper.convert_null_and_trim("Mass"              ) s_mass,
-			gcat_helper.convert_null_and_trim("MassFlag"          ) s_massflag,
-			gcat_helper.convert_null_and_trim("DryMass"           ) s_drymass,
-			gcat_helper.convert_null_and_trim("DryFlag"           ) s_dryflag,
-			gcat_helper.convert_null_and_trim("TotMass"           ) s_totmass,
-			gcat_helper.convert_null_and_trim("TotFlag"           ) s_totflag,
+			gcat_helper.convert_null_and_trim("MassFlag"          ) s_mass_flag,
+			gcat_helper.convert_null_and_trim("DryMass"           ) s_dry_mass,
+			gcat_helper.convert_null_and_trim("DryFlag"           ) s_dry_mass_flag,
+			gcat_helper.convert_null_and_trim("TotMass"           ) s_total_mass,
+			gcat_helper.convert_null_and_trim("TotFlag"           ) s_total_mass_flag,
 			gcat_helper.convert_null_and_trim("Length"            ) s_length,
-			gcat_helper.convert_null_and_trim("LFlag"             ) s_lflag,
+			gcat_helper.convert_null_and_trim("LFlag"             ) s_lenght_flag,
 			gcat_helper.convert_null_and_trim("Diameter"          ) s_diameter,
-			gcat_helper.convert_null_and_trim("DFlag"             ) s_dflag,
+			gcat_helper.convert_null_and_trim("DFlag"             ) s_diameter_flag,
 			gcat_helper.convert_null_and_trim("Span"              ) s_span,
-			gcat_helper.convert_null_and_trim("SpanFlag"          ) s_spanflag,
+			gcat_helper.convert_null_and_trim("SpanFlag"          ) s_span_flag,
 			gcat_helper.convert_null_and_trim("Shape"             ) s_shape,
-			gcat_helper.convert_null_and_trim("ODate"             ) s_odate,
+			gcat_helper.convert_null_and_trim("ODate"             ) s_orbit_epoch_date,
 			gcat_helper.convert_null_and_trim("Perigee"           ) s_perigee,
-			gcat_helper.convert_null_and_trim("PF"                ) s_pf,
+			gcat_helper.convert_null_and_trim("PF"                ) s_perigee_flag,
 			gcat_helper.convert_null_and_trim("Apogee"            ) s_apogee,
-			gcat_helper.convert_null_and_trim("AF"                ) s_af,
-			gcat_helper.convert_null_and_trim("Inc"               ) s_inc,
-			gcat_helper.convert_null_and_trim("IF"                ) s_if,
-			gcat_helper.convert_null_and_trim("OpOrbit"           ) s_oporbit,
-			gcat_helper.convert_null_and_trim("OQUAL"             ) s_oqual,
-			gcat_helper.convert_null_and_trim("AltNames"          ) s_altnames
+			gcat_helper.convert_null_and_trim("AF"                ) s_apogee_flag,
+			gcat_helper.convert_null_and_trim("Inc"               ) s_inclination,
+			gcat_helper.convert_null_and_trim("IF"                ) s_inclination_flag,
+			gcat_helper.convert_null_and_trim("OpOrbit"           ) s_orbit_type,
+			gcat_helper.convert_null_and_trim("OQUAL"             ) s_orbit_quality,
+			gcat_helper.convert_null_and_trim("AltNames"          ) s_alternate_names
 		from satcat_staging
-
-;
-
 	) rename_columns
 ) fix_data;
 
-alter table platform add constraint pk_platform primary key(p_code);
+alter table satellite add constraint pk_satellite primary key(s_jcat);
 
+
+
+
+			gcat_helper.convert_null_and_trim("Owner"             ) s_owner, --TODO: convert to multiple
+			gcat_helper.convert_null_and_trim("Manufacturer"      ) s_manufacturer, --TODO: Convert to multiple
 
 
 
@@ -1853,24 +1950,79 @@ begin
 end;
 /
 
-select replace(dbms_metadata.get_ddl('TABLE', 'ORGANIZATION_CLASS') ,'"'||user||'"', '"GCAT"') from dual;
+declare
+	v_table_name varchar2(128);
+	v_count number;
+	v_sql clob;
+
+	procedure drop_remote_gcat_tables_if_exists is
+		v_tables_does_not_exist exception;
+		pragma exception_init(v_tables_does_not_exist, -942);
+	begin
+		for i in reverse 1 .. gcat_helper.c_ordered_objects.count loop
+			begin
+				dbms_utility.exec_ddl_statement@gcat('drop table gcat.' || gcat_helper.c_ordered_objects(i) || ' purge');
+			exception when v_tables_does_not_exist then
+				null;
+			end;
+		end loop;
+	end drop_remote_gcat_tables_if_exists;
+
+	procedure create_remote_gcat_tables is
+	begin
+		for i in 1 .. gcat_helper.c_ordered_objects.count loop
+			v_table_name := gcat_helper.c_ordered_objects(i);
+
+			--Check if table exists locally.
+			select count(*) into v_count from user_tables where table_name = v_table_name;
+
+			--If table exists, create it remotely and populate it.
+			if v_count = 1 then
+				select replace(dbms_metadata.get_ddl('TABLE', v_table_name) ,'"'||user||'"', '"GCAT"')
+				into v_sql
+				from dual;
+
+				begin
+					dbms_utility.exec_ddl_statement@gcat(v_sql);
+				exception when others then
+					raise_application_error(-20000, 'Error with this SQL: ' || v_sql || chr(10) || sqlerrm);
+				end;
+			end if;
+		end loop;
+	end create_remote_gcat_tables;
+
+	procedure populate_remote_gcat_tables is
+	begin
+		for i in 1 .. gcat_helper.c_ordered_objects.count loop
+			v_table_name := gcat_helper.c_ordered_objects(i);
+
+			--Check if table exists locally.
+			select count(*) into v_count from user_tables where table_name = v_table_name;
+
+			--If table exists, create it remotely and populate it.
+			if v_count = 1 then
+				begin
+					v_sql :=
+					'
+						insert into gcat.'||v_table_name||'@gcat
+						select * from '||v_table_name
+					;
+
+					execute immediate v_sql;
+				exception when others then
+					raise_application_error(-20000, 'Error with this SQL: ' || v_sql || chr(10) || sqlerrm);
+				end;
+			end if;
+		end loop;
+	end populate_remote_gcat_tables;
 
 begin
-	dbms_utility.exec_ddl_statement@gcat(
-	q'[
-  CREATE TABLE "GCAT"."ORGANIZATION_CLASS" 
-   (	"OC_CODE" VARCHAR2(1), 
-	"OC_DESCRIPTION" VARCHAR2(32), 
-	 CONSTRAINT "PK_ORGANIZATION_CLASS" PRIMARY KEY ("OC_CODE")
-  USING INDEX  ENABLE
-   ) 
-	]');
+	drop_remote_gcat_tables_if_exists;
+	create_remote_gcat_tables;
+	populate_remote_gcat_tables;
+	commit;
 end;
 /
-
-insert into gcat.organization_class@gcat
-select * from organization_class;
-commit;
 
 
 
