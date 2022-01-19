@@ -37,6 +37,8 @@ Instances whewre GCAT text data does not perfectly map the relational model of t
 	Vague dates, which contain both date and precision, were converted to two separate columns to store the date and precision.
 	"sites.tsv"."Site" is stored as SITE.S_CODE. (While "sites.tsv" has an empty "Code" for backwards compatibility, the database prefers name consistency over text file backwards compatibility.
 	spin.tsv was combind into worlds.tsv to make a single WORLD table.
+	Most number string are converted to numbers. Values that might include infinity, such as the satellite apogee, are stored as BINARY_DOUBLE which supports infinity.
+
 
 Tables:
 
@@ -47,7 +49,8 @@ LAUNCH
 	LAUNCH_INVESTIGATOR
 
 SATELLITE
-	SATELLITE_ORG
+	SATELLITE_OWNER_ORG
+	SATELLITE_MANUFACTURER_ORG
 
 ORGANIZATION
 	ORGANIZATION_ORG_TYPE
@@ -1448,204 +1451,205 @@ end;
 --SATELLITE - TODO
 drop table satellite purge;
 
-select * from satcat_staging where "Apogee" = 'Inf';
-
-
 create table satellite compress as
 select
-	s_jcat,
-	s_satcat,
-	s_piece,
-	s_type_byte_1,
-	s_type_byte_2,
-	s_type_byte_3,
-	s_type_byte_4,
-	s_type_byte_5,
-	s_type_byte_6,
-	s_type_byte_7,
-	s_type_byte_8,
-	s_type_byte_9,
-	s_name,
-	s_payload_name,
-	gcat_helper.vague_to_date(s_launch_date) s_launch_date,
-	gcat_helper.vague_to_precision(s_launch_date) s_launch_date_precision,
-	s_parent,
-	gcat_helper.vague_to_date(s_separation_date) s_separation_date,
-	gcat_helper.vague_to_precision(s_separation_date) s_separation_date_precision,
-	s_primary_w_name,
-	gcat_helper.vague_to_date(s_destination_date) s_destination_date,
-	gcat_helper.vague_to_precision(s_destination_date) s_destination_date_precision,
-	s_status_phase,
-	s_destination,
-	s_state_o_code,
-	s_bus,
-	s_motor,
-	gcat_helper.gcat_to_number(s_mass) s_mass,
-	s_mass_flag,
-	gcat_helper.gcat_to_number(s_dry_mass) s_dry_mass,
-	s_dry_mass_flag,
-	gcat_helper.gcat_to_number(s_total_mass) s_total_mass,
-	s_total_mass_flag,
-	gcat_helper.gcat_to_number(s_length) s_length,
-	s_lenght_flag,
-	gcat_helper.gcat_to_number(s_diameter) s_diameter,
-	s_diameter_flag,
-	gcat_helper.gcat_to_number(s_span) s_span,
-	s_span_flag,
-	s_shape,
-	gcat_helper.vague_to_date(s_orbit_epoch_date) s_orbit_epoch_date,
-	gcat_helper.vague_to_precision(s_orbit_epoch_date) s_orbit_epoch_date_precision,
-	gcat_helper.gcat_to_number(s_perigee) s_perigee,
-	s_perigee_flag,
-	gcat_helper.gcat_to_number(s_apogee) s_apogee,
-	s_apogee_flag,
-	gcat_helper.gcat_to_number(s_inclination) s_inclination,
-	s_inclination_flag,
-	s_orbit_type,
-	s_orbit_quality,
-	s_alternate_names
+	sat_jcat,
+	sat_satcat,
+	sat_piece,
+	sat_type_byte_1,
+	sat_type_byte_2,
+	sat_type_byte_3,
+	sat_type_byte_4,
+	sat_type_byte_5,
+	sat_type_byte_6,
+	sat_type_byte_7,
+	sat_type_byte_8,
+	sat_type_byte_9,
+	sat_name,
+	sat_payload_name,
+	gcat_helper.vague_to_date(sat_launch_date) sat_launch_date,
+	gcat_helper.vague_to_precision(sat_launch_date) sat_launch_date_precision,
+	sat_parent,
+	gcat_helper.vague_to_date(sat_separation_date) sat_separation_date,
+	gcat_helper.vague_to_precision(sat_separation_date) sat_separation_date_precision,
+	sat_primary_w_name,
+	gcat_helper.vague_to_date(sat_destination_date) sat_destination_date,
+	gcat_helper.vague_to_precision(sat_destination_date) sat_destination_date_precision,
+	sat_statusat_phase,
+	sat_destination,
+	sat_state_o_code,
+	sat_bus,
+	sat_motor,
+	gcat_helper.gcat_to_number(sat_mass) sat_mass,
+	sat_massat_flag,
+	gcat_helper.gcat_to_number(sat_dry_mass) sat_dry_mass,
+	sat_dry_massat_flag,
+	gcat_helper.gcat_to_number(sat_total_mass) sat_total_mass,
+	sat_total_massat_flag,
+	gcat_helper.gcat_to_number(sat_length) sat_length,
+	sat_lenght_flag,
+	gcat_helper.gcat_to_number(sat_diameter) sat_diameter,
+	sat_diameter_flag,
+	gcat_helper.gcat_to_number(sat_span) sat_span,
+	sat_span_flag,
+	sat_shape,
+	gcat_helper.vague_to_date(sat_orbit_epoch_date) sat_orbit_epoch_date,
+	gcat_helper.vague_to_precision(sat_orbit_epoch_date) sat_orbit_epoch_date_precision,
+	gcat_helper.gcat_to_number(sat_perigee) sat_perigee,
+	sat_perigee_flag,
+	gcat_helper.gcat_to_binary_double(sat_apogee) sat_apogee,
+	sat_apogee_flag,
+	gcat_helper.gcat_to_number(sat_inclination) sat_inclination,
+	sat_inclination_flag,
+	sat_orbit_type,
+	sat_orbit_quality,
+	sat_alternate_names
 from
 (
 	--Fix data issues.
 	select
-		s_jcat,
-		s_satcat,
-		s_piece,
-		s_type_byte_1,
-		s_type_byte_2,
-		s_type_byte_3,
-		s_type_byte_4,
-		s_type_byte_5,
-		s_type_byte_6,
-		s_type_byte_7,
-		s_type_byte_8,
-		s_type_byte_9,
-		s_name,
-		s_payload_name,
-		s_launch_date,
-		s_parent,
-		s_separation_date,
-		s_primary_w_name,
+		sat_jcat,
+		sat_satcat,
+		sat_piece,
+		sat_type_byte_1,
+		sat_type_byte_2,
+		sat_type_byte_3,
+		sat_type_byte_4,
+		sat_type_byte_5,
+		sat_type_byte_6,
+		sat_type_byte_7,
+		sat_type_byte_8,
+		sat_type_byte_9,
+		sat_name,
+		sat_payload_name,
+		sat_launch_date,
+		sat_parent,
+		sat_separation_date,
+		sat_primary_w_name,
 		case
-			when s_destination_date = '2011 Jun   2' then '2011 Jun  2'
-			when s_destination_date = '2014 Jan   2' then '2014 Jan  2'
-			when s_destination_date = '2011 Mar  10' then '2011 Mar 10'
-			when s_destination_date = '2014 Dec   2' then '2014 Dec  2'
-			when s_destination_date = '2015 Feb   5' then '2015 Feb  5'
-			when s_destination_date = '2020 Oct  15' then '2020 Oct 15'
-			when s_destination_date = '2021 Sep  10 0900?' then '2021 Sep 10 0900?'
-			else s_destination_date
-		end s_destination_date,
-		s_status_phase,
-		s_destination,
-		s_state_o_code,
-		s_bus,
-		s_motor,
-		s_mass,
-		s_mass_flag,
-		s_dry_mass,
-		s_dry_mass_flag,
-		s_total_mass,
-		s_total_mass_flag,
-		s_length,
-		s_lenght_flag,
-		s_diameter,
-		s_diameter_flag,
-		s_span,
-		s_span_flag,
-		s_shape,
-		s_orbit_epoch_date,
-		s_perigee,
-		s_perigee_flag,
-		s_apogee,
-		s_apogee_flag,
-		s_inclination,
-		s_inclination_flag,
-		s_orbit_type,
-		s_orbit_quality,
-		s_alternate_names
+			when sat_destination_date = '2011 Jun   2' then '2011 Jun  2'
+			when sat_destination_date = '2014 Jan   2' then '2014 Jan  2'
+			when sat_destination_date = '2011 Mar  10' then '2011 Mar 10'
+			when sat_destination_date = '2014 Dec   2' then '2014 Dec  2'
+			when sat_destination_date = '2015 Feb   5' then '2015 Feb  5'
+			when sat_destination_date = '2020 Oct  15' then '2020 Oct 15'
+			when sat_destination_date = '2021 Sep  10 0900?' then '2021 Sep 10 0900?'
+			else sat_destination_date
+		end sat_destination_date,
+		sat_statusat_phase,
+		sat_destination,
+		sat_state_o_code,
+		sat_bus,
+		sat_motor,
+		sat_mass,
+		sat_massat_flag,
+		sat_dry_mass,
+		sat_dry_massat_flag,
+		sat_total_mass,
+		sat_total_massat_flag,
+		sat_length,
+		sat_lenght_flag,
+		sat_diameter,
+		sat_diameter_flag,
+		sat_span,
+		sat_span_flag,
+		sat_shape,
+		sat_orbit_epoch_date,
+		sat_perigee,
+		sat_perigee_flag,
+		sat_apogee,
+		sat_apogee_flag,
+		sat_inclination,
+		sat_inclination_flag,
+		sat_orbit_type,
+		sat_orbit_quality,
+		sat_alternate_names
 	from
 	(
 		--Rename columns.
 		select
-			gcat_helper.convert_null_and_trim("JCAT"              ) s_jcat,
-			gcat_helper.convert_null_and_trim("Satcat"            ) s_satcat,
-			gcat_helper.convert_null_and_trim("Piece"             ) s_piece,
-			gcat_helper.convert_null_and_trim(substr("Type", 1, 1)) s_type_byte_1,
-			gcat_helper.convert_null_and_trim(substr("Type", 2, 1)) s_type_byte_2,
-			gcat_helper.convert_null_and_trim(substr("Type", 3, 1)) s_type_byte_3,
-			gcat_helper.convert_null_and_trim(substr("Type", 4, 1)) s_type_byte_4,
-			gcat_helper.convert_null_and_trim(substr("Type", 5, 1)) s_type_byte_5,
-			gcat_helper.convert_null_and_trim(substr("Type", 6, 1)) s_type_byte_6,
-			gcat_helper.convert_null_and_trim(substr("Type", 7, 1)) s_type_byte_7,
-			gcat_helper.convert_null_and_trim(substr("Type", 8, 1)) s_type_byte_8,
-			gcat_helper.convert_null_and_trim(substr("Type", 9, 1)) s_type_byte_9,
-			gcat_helper.convert_null_and_trim("Name"              ) s_name,
-			gcat_helper.convert_null_and_trim("PLName"            ) s_payload_name,
-			gcat_helper.convert_null_and_trim("LDate"             ) s_launch_date,
-			gcat_helper.convert_null_and_trim("Parent"            ) s_parent, --TODO: 	"the parent can be an extended JCAT ID (EJCAT) or a body name."
-			gcat_helper.convert_null_and_trim("SDate"             ) s_separation_date,
-			gcat_helper.convert_null_and_trim("Primary"           ) s_primary_w_name,
-			gcat_helper.convert_null_and_trim("DDate"             ) s_destination_date,
-			gcat_helper.convert_null_and_trim("Status"            ) s_status_phase,
-			gcat_helper.convert_null_and_trim("Dest"              ) s_destination,
-			gcat_helper.convert_null_and_trim("State"             ) s_state_o_code, --TODO: Add foreign key
-			gcat_helper.convert_null_and_trim("Bus"               ) s_bus,
-			gcat_helper.convert_null_and_trim("Motor"             ) s_motor, --TODO: Convert to E_CODE?
-			gcat_helper.convert_null_and_trim("Mass"              ) s_mass,
-			gcat_helper.convert_null_and_trim("MassFlag"          ) s_mass_flag,
-			gcat_helper.convert_null_and_trim("DryMass"           ) s_dry_mass,
-			gcat_helper.convert_null_and_trim("DryFlag"           ) s_dry_mass_flag,
-			gcat_helper.convert_null_and_trim("TotMass"           ) s_total_mass,
-			gcat_helper.convert_null_and_trim("TotFlag"           ) s_total_mass_flag,
-			gcat_helper.convert_null_and_trim("Length"            ) s_length,
-			gcat_helper.convert_null_and_trim("LFlag"             ) s_lenght_flag,
-			gcat_helper.convert_null_and_trim("Diameter"          ) s_diameter,
-			gcat_helper.convert_null_and_trim("DFlag"             ) s_diameter_flag,
-			gcat_helper.convert_null_and_trim("Span"              ) s_span,
-			gcat_helper.convert_null_and_trim("SpanFlag"          ) s_span_flag,
-			gcat_helper.convert_null_and_trim("Shape"             ) s_shape,
-			gcat_helper.convert_null_and_trim("ODate"             ) s_orbit_epoch_date,
-			gcat_helper.convert_null_and_trim("Perigee"           ) s_perigee,
-			gcat_helper.convert_null_and_trim("PF"                ) s_perigee_flag,
-			gcat_helper.convert_null_and_trim("Apogee"            ) s_apogee,
-			gcat_helper.convert_null_and_trim("AF"                ) s_apogee_flag,
-			gcat_helper.convert_null_and_trim("Inc"               ) s_inclination,
-			gcat_helper.convert_null_and_trim("IF"                ) s_inclination_flag,
-			gcat_helper.convert_null_and_trim("OpOrbit"           ) s_orbit_type,
-			gcat_helper.convert_null_and_trim("OQUAL"             ) s_orbit_quality,
-			gcat_helper.convert_null_and_trim("AltNames"          ) s_alternate_names
+			gcat_helper.convert_null_and_trim("JCAT"              ) sat_jcat,
+			gcat_helper.convert_null_and_trim("Satcat"            ) sat_satcat,
+			gcat_helper.convert_null_and_trim("Piece"             ) sat_piece,
+			gcat_helper.convert_null_and_trim(substr("Type", 1, 1)) sat_type_byte_1,
+			gcat_helper.convert_null_and_trim(substr("Type", 2, 1)) sat_type_byte_2,
+			gcat_helper.convert_null_and_trim(substr("Type", 3, 1)) sat_type_byte_3,
+			gcat_helper.convert_null_and_trim(substr("Type", 4, 1)) sat_type_byte_4,
+			gcat_helper.convert_null_and_trim(substr("Type", 5, 1)) sat_type_byte_5,
+			gcat_helper.convert_null_and_trim(substr("Type", 6, 1)) sat_type_byte_6,
+			gcat_helper.convert_null_and_trim(substr("Type", 7, 1)) sat_type_byte_7,
+			gcat_helper.convert_null_and_trim(substr("Type", 8, 1)) sat_type_byte_8,
+			gcat_helper.convert_null_and_trim(substr("Type", 9, 1)) sat_type_byte_9,
+			gcat_helper.convert_null_and_trim("Name"              ) sat_name,
+			gcat_helper.convert_null_and_trim("PLName"            ) sat_payload_name,
+			gcat_helper.convert_null_and_trim("LDate"             ) sat_launch_date,
+			gcat_helper.convert_null_and_trim("Parent"            ) sat_parent, --TODO: 	"the parent can be an extended JCAT ID (EJCAT) or a body name."
+			gcat_helper.convert_null_and_trim("SDate"             ) sat_separation_date,
+			gcat_helper.convert_null_and_trim("Primary"           ) sat_primary_w_name,
+			gcat_helper.convert_null_and_trim("DDate"             ) sat_destination_date,
+			gcat_helper.convert_null_and_trim("Status"            ) sat_statusat_phase,
+			gcat_helper.convert_null_and_trim("Dest"              ) sat_destination,
+			gcat_helper.convert_null_and_trim("State"             ) sat_state_o_code,
+			gcat_helper.convert_null_and_trim("Bus"               ) sat_bus,
+			gcat_helper.convert_null_and_trim("Motor"             ) sat_motor,
+			gcat_helper.convert_null_and_trim("Mass"              ) sat_mass,
+			gcat_helper.convert_null_and_trim("MassFlag"          ) sat_massat_flag,
+			gcat_helper.convert_null_and_trim("DryMass"           ) sat_dry_mass,
+			gcat_helper.convert_null_and_trim("DryFlag"           ) sat_dry_massat_flag,
+			gcat_helper.convert_null_and_trim("TotMass"           ) sat_total_mass,
+			gcat_helper.convert_null_and_trim("TotFlag"           ) sat_total_massat_flag,
+			gcat_helper.convert_null_and_trim("Length"            ) sat_length,
+			gcat_helper.convert_null_and_trim("LFlag"             ) sat_lenght_flag,
+			gcat_helper.convert_null_and_trim("Diameter"          ) sat_diameter,
+			gcat_helper.convert_null_and_trim("DFlag"             ) sat_diameter_flag,
+			gcat_helper.convert_null_and_trim("Span"              ) sat_span,
+			gcat_helper.convert_null_and_trim("SpanFlag"          ) sat_span_flag,
+			gcat_helper.convert_null_and_trim("Shape"             ) sat_shape,
+			gcat_helper.convert_null_and_trim("ODate"             ) sat_orbit_epoch_date,
+			gcat_helper.convert_null_and_trim("Perigee"           ) sat_perigee,
+			gcat_helper.convert_null_and_trim("PF"                ) sat_perigee_flag,
+			gcat_helper.convert_null_and_trim("Apogee"            ) sat_apogee,
+			gcat_helper.convert_null_and_trim("AF"                ) sat_apogee_flag,
+			gcat_helper.convert_null_and_trim("Inc"               ) sat_inclination,
+			gcat_helper.convert_null_and_trim("IF"                ) sat_inclination_flag,
+			gcat_helper.convert_null_and_trim("OpOrbit"           ) sat_orbit_type,
+			gcat_helper.convert_null_and_trim("OQUAL"             ) sat_orbit_quality,
+			gcat_helper.convert_null_and_trim("AltNames"          ) sat_alternate_names
 		from satcat_staging
 	) rename_columns
 ) fix_data;
 
-alter table satellite add constraint pk_satellite primary key(s_jcat);
+alter table satellite add constraint pk_satellite primary key(sat_jcat);
+alter table satellite add constraint fk_satellite_state_org foreign key (sat_state_o_code) references organization(o_code);
 
 
+--SATELLITE_OWNER_ORG
+drop table satellite_owner_org;
+create table satellite_owner_org compress as
+select cast("JCAT" as varchar2(100)) soo_sat_jcat, rtrim(column_value, '?') soo_o_code
+from satcat_staging
+cross join gcat_helper.get_nt_from_list("Owner", '/')
+where "Owner" <> '-'
+order by 1,2;
+
+alter table satellite_owner_org add constraint pk_satellite_owner_org primary key(soo_sat_jcat, soo_o_code);
+alter table satellite_owner_org add constraint fk_satellite_owner_org_satellite foreign key(soo_sat_jcat) references satellite(sat_jcat);
+alter table satellite_owner_org add constraint fk_satellite_owner_org_organization foreign key(soo_o_code) references organization(o_code);
 
 
-			gcat_helper.convert_null_and_trim("Owner"             ) s_owner, --TODO: convert to multiple
-			gcat_helper.convert_null_and_trim("Manufacturer"      ) s_manufacturer, --TODO: Convert to multiple
+--SATELLITE_MANUFACTURER_ORG
+drop table satellite_manufacturer_org;
+create table satellite_manufacturer_org compress as
+select cast("JCAT" as varchar2(100)) smo_sat_jcat, rtrim(column_value, '?') smo_o_code
+from satcat_staging
+cross join gcat_helper.get_nt_from_list(rtrim("Manufacturer", '?'), '/')
+where "Manufacturer" <> '-'
+order by 1,2;
 
+alter table satellite_manufacturer_org add constraint pk_satellite_manufacturer_org primary key(smo_sat_jcat, smo_o_code);
+alter table satellite_manufacturer_org add constraint fk_satellite_manufacturer_org_satellite foreign key(smo_sat_jcat) references satellite(sat_jcat);
+alter table satellite_manufacturer_org add constraint fk_satellite_manufacturer_org_organization foreign key(smo_o_code) references organization(o_code);
 
-
-select * from satcat_staging;
-select * from space.satellite;
-
-
-
-SATELLITE
-SATELLITE_ORG
-
-
-
-
-
-select distinct replace("Group", '?') from launch_staging where "Group" not like '%/%';
-
-
-select * from table(gcat_helper.get_nt_from_list('BAJ/', '/'));
-select * from table(gcat_helper.get_nt_from_list('/BAJ//', '/'));
 
 
 
@@ -1674,6 +1678,14 @@ ENGINE_MANUFACTURER
 
 
 
+/*
+TODO: Convert to S_MOTOR to E_CODE? Currently the values look very different.
+select distinct s_motor, "Name"
+from satellite
+full outer join engines_staging
+	on s_motor = "Name"
+order by coalesce(s_motor, "Name");
+*/
 
 
 --PROPELLANT:
@@ -1941,15 +1953,6 @@ end;
 -- Copy tables to the cloud.
 --------------------------------------------------------------------------------
 
---TODO: Automate this for all tables.
-
-begin
-	dbms_metadata.set_transform_param (dbms_metadata.session_transform, 'SEGMENT_ATTRIBUTES', false);
-	--Why doesn't this work? This would be much better than the "REPLACE" option.
-	--dbms_metadata.set_transform_param (dbms_metadata.session_transform, 'REMAP_SCHEMA', 'JHELLER', 'GCAT');
-end;
-/
-
 declare
 	v_table_name varchar2(128);
 	v_count number;
@@ -1970,6 +1973,10 @@ declare
 
 	procedure create_remote_gcat_tables is
 	begin
+		dbms_metadata.set_transform_param (dbms_metadata.session_transform, 'SEGMENT_ATTRIBUTES', false);
+		--Why doesn't this work? This would be much better than the "REPLACE" option.
+		--dbms_metadata.set_transform_param (dbms_metadata.session_transform, 'REMAP_SCHEMA', 'JHELLER', 'GCAT');
+
 		for i in 1 .. gcat_helper.c_ordered_objects.count loop
 			v_table_name := gcat_helper.c_ordered_objects(i);
 
@@ -2016,44 +2023,41 @@ declare
 		end loop;
 	end populate_remote_gcat_tables;
 
+	procedure create_public_synonyms_and_grants is
+	begin
+		dbms_utility.exec_ddl_statement@gcat(
+		q'[
+			create or replace procedure create_public_synonyms_and_grants as
+			begin
+				for tables in
+				(
+					select
+						'create or replace public synonym ' || object_name || ' for ' || owner || '.' || object_name v_synonym_sql,
+						'grant select on '||owner||'.'||object_name||' to GCAT_PUBLIC' v_grant_sql
+					from all_objects
+					where owner = 'GCAT'
+						and object_type not in ('INDEX')
+					order by object_name
+				) loop
+					execute immediate tables.v_synonym_sql;
+					execute immediate tables.v_grant_sql;
+				end loop;
+			end;
+		]');
+
+		execute immediate 'begin create_public_synonyms_and_grants@gcat; end;';
+
+		dbms_utility.exec_ddl_statement@gcat(
+		q'[
+			drop procedure create_public_synonyms_and_grants
+		]');
+	end create_public_synonyms_and_grants;
+
 begin
 	drop_remote_gcat_tables_if_exists;
 	create_remote_gcat_tables;
 	populate_remote_gcat_tables;
 	commit;
-end;
-/
-
-
-
-
--- Create public synonyms and grants.
-begin
-	dbms_utility.exec_ddl_statement@gcat(
-	q'[
-		create or replace procedure create_public_synonyms_and_grants as
-		begin
-			for tables in
-			(
-				select
-					'create or replace public synonym ' || object_name || ' for ' || owner || '.' || object_name v_synonym_sql,
-					'grant select on '||owner||'.'||object_name||' to GCAT_PUBLIC' v_grant_sql
-				from all_objects
-				where owner = 'GCAT'
-					and object_type not in ('INDEX')
-				order by object_name
-			) loop
-				execute immediate tables.v_synonym_sql;
-				execute immediate tables.v_grant_sql;
-			end loop;
-		end;
-	]');
-
-	execute immediate 'begin create_public_synonyms_and_grants@gcat; end;';
-
-	dbms_utility.exec_ddl_statement@gcat(
-	q'[
-		drop procedure create_public_synonyms_and_grants
-	]');
+	create_public_synonyms_and_grants;
 end;
 /
