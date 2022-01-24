@@ -52,6 +52,8 @@ SATELLITE
 	SATELLITE_OWNER_ORG
 	SATELLITE_MANUFACTURER_ORG
 
+PAYLOAD
+
 ORGANIZATION
 	ORGANIZATION_ORG_TYPE
 		ORGANIZATION_TYPE
@@ -102,10 +104,30 @@ select 'lp.tsv'        file_name, 'LP_STAGING'        staging_table_name,  2700 
 select 'family.tsv'    file_name, 'FAMILY_STAGING'    staging_table_name,   615 min_expected_rows, 'https://planet4589.org/space/gcat/data/tables/family.tsv'   url, '#Family' from dual union all
 select 'lv.tsv'        file_name, 'LV_STAGING'        staging_table_name,  1660 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/lv.tsv'        url, '#LV_Name	LV_Family	LV_Manufacturer	LV_Variant	LV_Alias	LV_Min_Stage	LV_Max_Stage	Length	LFlag	Diameter	DFlag	Launch_Mass	MFlag	LEO_Capacity	GTO_Capacity	TO_Thrust	Class	Apogee	Range' from dual union all
 select 'refs.tsv'      file_name, 'REFS_STAGING'      staging_table_name,  3050 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/refs.tsv'      url, '#Cite	Reference' from dual union all
-select 'satcat.tsv'    file_name, 'SATCAT_STAGING'    staging_table_name, 50850 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/satcat.tsv'       url, '#JCAT	Satcat	Piece	Type	Name	PLName	LDate	Parent	SDate	Primary	DDate	Status	Dest	Owner	State	Manufacturer	Bus	Motor	Mass	MassFlag	DryMass	DryFlag	TotMass	TotFlag	Length	LFlag	Diameter	DFlag	Span	SpanFlag	Shape	ODate	Perigee	PF	Apogee	AF	Inc	IF	OpOrbit	OQUAL	AltNames' from dual union all
 select 'worlds.tsv'    file_name, 'WORLDS_STAGING'    staging_table_name,   285 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/worlds/worlds.tsv'    url, '#IDT	IDName	Name	AltName	Radius	PolarRadius	Mass	SemiMajorAxis	Periapsis	Ecc	Inc	Node	Peri	M	Epoch	RotPeriod	OrbPeriod	Ephemeris	WType	Primary' from dual union all
-select 'spin.tsv'      file_name, 'SPIN_STAGING'      staging_table_name,    70 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/worlds/spin.tsv'      url, '#IDT	IDName	Name	Rho	IFac	PoleRA	PoleDec	Meridian	SpinRate	J2	J4	J6	PoleRARate	PoleDecDec	PoleFunc	SpinFunc	InitFunc	JFile' from dual
+select 'spin.tsv'      file_name, 'SPIN_STAGING'      staging_table_name,    70 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/worlds/spin.tsv'      url, '#IDT	IDName	Name	Rho	IFac	PoleRA	PoleDec	Meridian	SpinRate	J2	J4	J6	PoleRARate	PoleDecDec	PoleFunc	SpinFunc	InitFunc	JFile' from dual union all
+select 'satcat.tsv'    file_name, 'SATCAT_STAGING'    staging_table_name, 50850 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/satcat.tsv'       url, '#JCAT	Satcat	Piece	Type	Name	PLName	LDate	Parent	SDate	Primary	DDate	Status	Dest	Owner	State	Manufacturer	Bus	Motor	Mass	MassFlag	DryMass	DryFlag	TotMass	TotFlag	Length	LFlag	Diameter	DFlag	Span	SpanFlag	Shape	ODate	Perigee	PF	Apogee	AF	Inc	IF	OpOrbit	OQUAL	AltNames' from dual union all
+select 'auxcat.tsv'    file_name, 'AUXCAT_STAGING'    staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/auxcat.tsv'       url, '#JCAT	Satcat	Piece	Type	Name	PLName	LDate	Parent	SDate	Primary	DDate	Status	Dest	Owner	State	Manufacturer	Bus	Motor	Mass	MassFlag	DryMass	DryFlag	TotMass	TotFlag	Length	LFlag	Diameter	DFlag	Span	SpanFlag	Shape	ODate	Perigee	PF	Apogee	AF	Inc	IF	OpOrbit	OQUAL	AltNames' from dual union all
+select 'ftocat.tsv'    file_name, 'FTOCAT_STAGING'    staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/ftocat.tsv'       url, '#JCAT	Satcat	Piece	Type	Name	PLName	LDate	Parent	SDate	Primary	DDate	Status	Dest	Owner	State	Manufacturer	Bus	Motor	Mass	MassFlag	DryMass	DryFlag	TotMass	TotFlag	Length	LFlag	Diameter	DFlag	Span	SpanFlag	Shape	ODate	Perigee	PF	Apogee	AF	Inc	IF	OpOrbit	OQUAL	AltNames' from dual union all
+select 'lcat.tsv'      file_name, 'LCAT_STAGING'      staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/lcat.tsv'         url, '#JCAT	Satcat	Piece	Type	Name	PLName	LDate	Parent	SDate	Primary	DDate	Status	Dest	Owner	State	Manufacturer	Bus	Motor	Mass	MassFlag	DryMass	DryFlag	TotMass	TotFlag	Length	LFlag	Diameter	DFlag	Span	SpanFlag	Shape	ODate	Perigee	PF	Apogee	AF	Inc	IF	OpOrbit	OQUAL	AltNames' from dual union all
+select 'rcat.tsv'      file_name, 'RCAT_STAGING'      staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/rcat.tsv'         url, '#JCAT	Satcat	Piece	Type	Name	PLName	LDate	Parent	SDate	Primary	DDate	Status	Dest	Owner	State	Manufacturer	Bus	Motor	Mass	MassFlag	DryMass	DryFlag	TotMass	TotFlag	Length	LFlag	Diameter	DFlag	Span	SpanFlag	Shape	ODate	Perigee	PF	Apogee	AF	Inc	IF	OpOrbit	OQUAL	AltNames' from dual union all
+select 'tmpcat.tsv'    file_name, 'TMPCAT_STAGING'    staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/tmpcat.tsv'       url, '#JCAT	Satcat	Piece	Type	Name	PLName	LDate	Parent	SDate	Primary	DDate	Status	Dest	Owner	State	Manufacturer	Bus	Motor	Mass	MassFlag	DryMass	DryFlag	TotMass	TotFlag	Length	LFlag	Diameter	DFlag	Span	SpanFlag	Shape	ODate	Perigee	PF	Apogee	AF	Inc	IF	OpOrbit	OQUAL	AltNames' from dual union all
+select 'csocat.tsv'    file_name, 'CSOCAT_STAGING'    staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/csocat.tsv'       url, '#JCAT	Satcat	Piece	Type	Name	PLName	LDate	Parent	SDate	Primary	DDate	Status	Dest	Owner	State	Manufacturer	Bus	Motor	Mass	MassFlag	DryMass	DryFlag	TotMass	TotFlag	Length	LFlag	Diameter	DFlag	Span	SpanFlag	Shape	ODate	Perigee	PF	Apogee	AF	Inc	IF	OpOrbit	OQUAL	AltNames' from dual union all
+select 'ecat.tsv'      file_name, 'ECAT_STAGING'      staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/ecat.tsv'         url, '#JCAT	Satcat	Piece	Type	Name	PLName	LDate	Parent	SDate	Primary	DDate	Status	Dest	Owner	State	Manufacturer	Bus	Motor	Mass	MassFlag	DryMass	DryFlag	TotMass	TotFlag	Length	LFlag	Diameter	DFlag	Span	SpanFlag	Shape	ODate	Perigee	PF	Apogee	AF	Inc	IF	OpOrbit	OQUAL	AltNames' from dual union all
+select 'deepcat.tsv'   file_name, 'DEEPCAT_STAGING'   staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/deepcat.tsv'      url, '#JCAT	Satcat	Piece	Type	Name	PLName	LDate	Parent	SDate	Primary	DDate	Status	Dest	Owner	State	Manufacturer	Bus	Motor	Mass	MassFlag	DryMass	DryFlag	TotMass	TotFlag	Length	LFlag	Diameter	DFlag	Span	SpanFlag	Shape	ODate	Perigee	PF	Apogee	AF	Inc	IF	OpOrbit	OQUAL	AltNames' from dual union all
+select 'hcocat.tsv'    file_name, 'HCOCAT_STAGING'    staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/hcocat.tsv'       url, '#JCAT	Satcat	Piece	Type	Name	PLName	LDate	Parent	SDate	Primary	DDate	Status	Dest	Owner	State	Manufacturer	Bus	Motor	Mass	MassFlag	DryMass	DryFlag	TotMass	TotFlag	Length	LFlag	Diameter	DFlag	Span	SpanFlag	Shape	ODate	Perigee	PF	Apogee	AF	Inc	IF	OpOrbit	OQUAL	AltNames' from dual union all
+select 'lprcat.tsv'    file_name, 'LPRCAT_STAGING'    staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/lprcat.tsv'       url, '#JCAT	Satcat	Piece	Type	Name	PLName	LDate	Parent	SDate	Primary	DDate	Status	Dest	Owner	State	Manufacturer	Bus	Motor	Mass	MassFlag	DryMass	DryFlag	TotMass	TotFlag	Length	LFlag	Diameter	DFlag	Span	SpanFlag	Shape	ODate	Perigee	PF	Apogee	AF	Inc	IF	OpOrbit	OQUAL	AltNames' from dual union all
+select 'psatcat.tsv'   file_name, 'PSATCAT_STAGING'   staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/psatcat.tsv'      url, '#JCAT	Piece	Name	LDate	TLast	TOp	TDate	TF	Program	Plane	Att	Mvr	Class	Category	UNState	UNReg	UNPeriod	UNPerigee	UNApogee	UNInc	Result	Control	Discipline	Comment' from dual union all
+select 'pauxcat.tsv'   file_name, 'PAUXCAT_STAGING'   staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/pauxcat.tsv'      url, '#JCAT	Piece	Name	LDate	TLast	TOp	TDate	TF	Program	Plane	Att	Mvr	Class	Category	UNState	UNReg	UNPeriod	UNPerigee	UNApogee	UNInc	Result	Control	Discipline	Comment' from dual union all
+select 'pftocat.tsv'   file_name, 'PFTOCAT_STAGING'   staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/pftocat.tsv'      url, '#JCAT	Piece	Name	LDate	TLast	TOp	TDate	TF	Program	Plane	Att	Mvr	Class	Category	UNState	UNReg	UNPeriod	UNPerigee	UNApogee	UNInc	Result	Control	Discipline	Comment' from dual union all
+select 'plcat.tsv'     file_name, 'PLCAT_STAGING'     staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/plcat.tsv'        url, '#JCAT	Piece	Name	LDate	TLast	TOp	TDate	TF	Program	Plane	Att	Mvr	Class	Category	UNState	UNReg	UNPeriod	UNPerigee	UNApogee	UNInc	Result	Control	Discipline	Comment' from dual
 order by file_name;
+
+
+
+
+
+
 
 
 
@@ -329,7 +351,7 @@ begin
 		from gcat_config_vw
 		--TEMP for TESTING - only use one file.
 		--where file_name = 'satcat.tsv'
-		where file_name in ('worlds.tsv', 'spin.tsv')
+		where file_name like '%cat%'
 		order by file_name
 	) loop
 		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 1, argument_value => '--output');
@@ -394,7 +416,7 @@ end;
 
 --------------------------------------------------------------------------------
 -- Create staging tables.
--- May take a few minutes to run.
+-- Takes about 5 minutes for all tables.
 --------------------------------------------------------------------------------
 
 --Recreate staging tables for each file, based on the first header row.
@@ -403,7 +425,7 @@ declare
 	v_sql_template varchar2(32767) :=
 	q'[
 		create table #STAGING_TABLE_NAME# as
-		select
+		select /*+ no_gather_optimizer_statistics */
 			line_number, #COLUMN_LIST#
 		from table
 		(
@@ -429,7 +451,7 @@ begin
 			order by staging_table_name
 		) loop
 			begin
-				execute immediate 'drop table ' || tables.staging_table_name;
+				execute immediate 'drop table ' || tables.staging_table_name || ' purge';
 			exception when v_table_does_not_exist then null;
 			end;
 		end loop;
@@ -655,81 +677,81 @@ alter table organization_org_type add constraint fk_organization_org_type_organi
 --SITE
 create table site compress as
 select
-	s_code,
-	s_ucode,
-	s_type,
-	s_statecode,
-	gcat_helper.vague_to_date(s_tstart) s_tstart,
-	gcat_helper.vague_to_precision(s_tstart) s_tstart_precision,
-	gcat_helper.vague_to_date(s_tstop) s_tstop,
-	gcat_helper.vague_to_precision(s_tstop) s_tstop_precision,
-	s_shortname,
-	s_name,
-	s_location,
-	gcat_helper.gcat_to_number(s_longitude) s_longitude,
-	gcat_helper.gcat_to_number(s_latitude) s_latitude,
-	gcat_helper.gcat_to_number(s_error) s_error,
-	s_shortename,
-	s_ename,
-	s_group,
-	s_uname
+	site_code,
+	site_ucode,
+	site_type,
+	site_state_code,
+	gcat_helper.vague_to_date(site_tstart) site_tstart,
+	gcat_helper.vague_to_precision(site_tstart) site_tstart_precision,
+	gcat_helper.vague_to_date(site_tstop) site_tstop,
+	gcat_helper.vague_to_precision(site_tstop) site_tstop_precision,
+	site_short_name,
+	site_name,
+	site_location,
+	gcat_helper.gcat_to_number(site_longitude) site_longitude,
+	gcat_helper.gcat_to_number(site_latitude) site_latitude,
+	gcat_helper.gcat_to_number(site_error) site_error,
+	site_short_ename,
+	site_ename,
+	site_group,
+	site_uname
 from
 (
 	--Fix data issues.
 	select
-		s_code,
-		s_ucode,
-		s_type,
-		s_statecode,
-		replace(s_tstart, '1974 Nov  6:', '1974 Nov  6') s_tstart,
-		s_tstop,
-		s_shortname,
-		s_name,
-		s_location,
-		s_longitude,
-		s_latitude,
-		s_error,
-		s_shortename,
-		s_ename,
-		s_group,
-		s_uname
+		site_code,
+		site_ucode,
+		site_type,
+		site_state_code,
+		replace(site_tstart, '1974 Nov  6:', '1974 Nov  6') site_tstart,
+		site_tstop,
+		site_short_name,
+		site_name,
+		site_location,
+		site_longitude,
+		site_latitude,
+		site_error,
+		site_short_ename,
+		site_ename,
+		site_group,
+		site_uname
 	from
 	(
 		--Rename columns.
 		select
-			gcat_helper.convert_null_and_trim("Site"      ) s_code,
-			gcat_helper.convert_null_and_trim("UCode"     ) s_ucode,
-			gcat_helper.convert_null_and_trim("Type"      ) s_type,
-			gcat_helper.convert_null_and_trim("StateCode" ) s_statecode,
-			gcat_helper.convert_null_and_trim("TStart"    ) s_tstart,
-			gcat_helper.convert_null_and_trim("TStop"     ) s_tstop,
-			gcat_helper.convert_null_and_trim("ShortName" ) s_shortname,
-			gcat_helper.convert_null_and_trim("Name"      ) s_name,
-			gcat_helper.convert_null_and_trim("Location"  ) s_location,
-			gcat_helper.convert_null_and_trim("Longitude" ) s_longitude,
-			gcat_helper.convert_null_and_trim("Latitude"  ) s_latitude,
-			gcat_helper.convert_null_and_trim("Error"     ) s_error,
-			gcat_helper.convert_null_and_trim("ShortEName") s_shortename,
-			gcat_helper.convert_null_and_trim("EName"     ) s_ename,
-			gcat_helper.convert_null_and_trim("Group"     ) s_group,
-			gcat_helper.convert_null_and_trim("UName"     ) s_uname
+			gcat_helper.convert_null_and_trim("Site"      ) site_code,
+			gcat_helper.convert_null_and_trim("UCode"     ) site_ucode,
+			gcat_helper.convert_null_and_trim("Type"      ) site_type,
+			gcat_helper.convert_null_and_trim("StateCode" ) site_state_code,
+			gcat_helper.convert_null_and_trim("TStart"    ) site_tstart,
+			gcat_helper.convert_null_and_trim("TStop"     ) site_tstop,
+			gcat_helper.convert_null_and_trim("ShortName" ) site_short_name,
+			gcat_helper.convert_null_and_trim("Name"      ) site_name,
+			gcat_helper.convert_null_and_trim("Location"  ) site_location,
+			gcat_helper.convert_null_and_trim("Longitude" ) site_longitude,
+			gcat_helper.convert_null_and_trim("Latitude"  ) site_latitude,
+			gcat_helper.convert_null_and_trim("Error"     ) site_error,
+			gcat_helper.convert_null_and_trim("ShortEName") site_short_ename,
+			gcat_helper.convert_null_and_trim("EName"     ) site_ename,
+			gcat_helper.convert_null_and_trim("Group"     ) site_group,
+			gcat_helper.convert_null_and_trim("UName"     ) site_uname
 		from sites_staging
 	) rename_columns
 ) fix_data;
 
-alter table site add constraint pk_site primary key(s_code);
+alter table site add constraint pk_site primary key(site_code);
 
 
 --SITE_ORG
 create table site_org compress as
-select cast("Site" as varchar2(1000)) so_s_code, replace(column_value, '?') so_o_code
+select cast("Site" as varchar2(1000)) so_site_code, replace(column_value, '?') so_o_code
 from sites_staging
 cross join gcat_helper.get_nt_from_list("Parent", '/')
 where "Parent" <> '-'
-order by so_s_code;
+order by so_site_code;
 
-alter table site_org add constraint pk_site_org primary key(so_s_code, so_o_code);
-alter table site_org add constraint fk_site_org_site foreign key(so_s_code) references site(s_code);
+alter table site_org add constraint pk_site_org primary key(so_site_code, so_o_code);
+alter table site_org add constraint fk_site_org_site foreign key(so_site_code) references site(site_code);
 alter table site_org add constraint fk_site_org_org foreign key(so_o_code) references organization(o_code);
 
 
@@ -824,7 +846,7 @@ alter table platform_org add constraint fk_platform_org_org foreign key(po_o_cod
 --LAUNCH_POINT
 create table launch_point compress as
 select
-	cast(lp_s_code as varchar2(1000)) lp_s_code,
+	cast(lp_site_code as varchar2(1000)) lp_site_code,
 	cast(lp_code as varchar2(1000)) lp_code,
 	lp_ucode,
 	lp_type,
@@ -846,7 +868,7 @@ from
 (
 	--Fix data.
 	select
-		lp_s_code,
+		lp_site_code,
 		lp_code,
 		lp_ucode,
 		lp_type,
@@ -866,7 +888,7 @@ from
 	(
 		--Rename columns.
 		select
-			gcat_helper.convert_null_and_trim("Site"      ) lp_s_code,
+			gcat_helper.convert_null_and_trim("Site"      ) lp_site_code,
 			gcat_helper.convert_null_and_trim("Code"      ) lp_code,
 			gcat_helper.convert_null_and_trim("UCode"     ) lp_ucode,
 			gcat_helper.convert_null_and_trim("Type"      ) lp_type,
@@ -886,14 +908,14 @@ from
 	) rename_columns
 ) fix_data;
 
-alter table launch_point add constraint pk_launch_point primary key(lp_s_code, lp_code);
-alter table launch_point add constraint fk_launch_point_site foreign key (lp_s_code) references site(s_code);
+alter table launch_point add constraint pk_launch_point primary key(lp_site_code, lp_code);
+alter table launch_point add constraint fk_launch_point_site foreign key (lp_site_code) references site(site_code);
 
 
 --LAUNCH_POINT_ORG
 create table launch_point_org compress as
 select
-	cast("Site" as varchar2(1000)) lpo_s_code,
+	cast("Site" as varchar2(1000)) lpo_site_code,
 	cast("Code" as varchar2(1000)) lpo_lp_code,
 	replace(replace(replace(column_value, '?'), 'PRC', 'CN'), 'DNVG', 'DVNG') lpo_o_code
 from lp_staging
@@ -901,8 +923,8 @@ cross join gcat_helper.get_nt_from_list("Parent", '/')
 where "Parent" <> '-'
 order by 1,2;
 
-alter table launch_point_org add constraint pk_launch_point_org primary key(lpo_s_code, lpo_lp_code, lpo_o_code);
-alter table launch_point_org add constraint fk_launch_point_org_launch_point foreign key(lpo_s_code, lpo_lp_code) references launch_point(lp_s_code, lp_code);
+alter table launch_point_org add constraint pk_launch_point_org primary key(lpo_site_code, lpo_lp_code, lpo_o_code);
+alter table launch_point_org add constraint fk_launch_point_org_launch_point foreign key(lpo_site_code, lpo_lp_code) references launch_point(lp_site_code, lp_code);
 alter table launch_point_org add constraint fk_launch_point_org_org foreign key(lpo_o_code) references organization(o_code);
 
 
@@ -1008,7 +1030,7 @@ alter table reference add constraint pk_reference primary key(r_cite);
 
 --LAUNCH
 create table launch nologging compress as
-select
+select /*+ no_gather_optimizer_statistics */
 	l_launch_tag,
 	gcat_helper.gcat_to_number(l_launch_jd) l_launch_jd,
 	gcat_helper.vague_to_date(l_launch_date) l_launch_date,
@@ -1020,9 +1042,9 @@ select
 	l_mission,
 	l_flight_code,
 	l_p_code,
-	l_launch_lp_s_code,
+	l_launch_lp_site_code,
 	l_launch_lp_code,
-	l_ascent_lp_s_code,
+	l_ascent_lp_site_code,
 	l_ascent_lp_code,
 	gcat_helper.gcat_to_number(l_apogee) l_apogee,
 	l_apogee_flag,
@@ -1065,10 +1087,10 @@ from
 		regexp_replace(rtrim(l_p_code, '?'), '^SS-088$', 'SS-083') l_p_code,
 		--FIX:
 		case
-			when l_launch_lp_s_code = 'PSCA' and l_launch_lp_code in ('LP2', 'LP2?') then 'KLC'
+			when l_launch_lp_site_code = 'PSCA' and l_launch_lp_code in ('LP2', 'LP2?') then 'KLC'
 			else
 				regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(
-					rtrim(l_launch_lp_s_code, '?')
+					rtrim(l_launch_lp_site_code, '?')
 					,'^NIIP-53$', 'GIK-1')
 					,'^NIIP-5$', 'GIK-5')
 					,'^GNIIPV$', 'GIK-1')
@@ -1079,11 +1101,11 @@ from
 					,'^VSFBS$', 'VS')
 					,'^VSFB$', 'V')
 					,'^USC', 'KASC')
-		end l_launch_lp_s_code,
+		end l_launch_lp_site_code,
 		--FIX:
 		case
-			when l_launch_lp_s_code = 'SPFL' and l_launch_lp_code = 'LC47' then 'SLC47'
-			when rtrim(l_launch_lp_s_code, '?') = 'JQ' and rtrim(l_launch_lp_code, '?') = 'LC43/95A' then 'LC43/95'
+			when l_launch_lp_site_code = 'SPFL' and l_launch_lp_code = 'LC47' then 'SLC47'
+			when rtrim(l_launch_lp_site_code, '?') = 'JQ' and rtrim(l_launch_lp_code, '?') = 'LC43/95A' then 'LC43/95'
 			else
 				regexp_replace(regexp_replace(
 					rtrim(l_launch_lp_code, '?')
@@ -1091,13 +1113,13 @@ from
 					--I guessed which one it is
 					,'^LC81$', 'LC81/23')
 			end l_launch_lp_code,
-		regexp_replace(rtrim(l_ascent_lp_s_code, '?')
+		regexp_replace(rtrim(l_ascent_lp_site_code, '?')
 			,'^DGAEML$', 'CEL')
-		l_ascent_lp_s_code,
+		l_ascent_lp_site_code,
 		--FIX:
 		case
-			when l_ascent_lp_s_code = 'KMR' and l_ascent_lp_code = 'Lp1' then 'LP1'
-			when l_ascent_lp_s_code = 'A51' and l_ascent_lp_code = 'X' then 'X1'
+			when l_ascent_lp_site_code = 'KMR' and l_ascent_lp_code = 'Lp1' then 'LP1'
+			when l_ascent_lp_site_code = 'A51' and l_ascent_lp_code = 'X' then 'X1'
 			else rtrim(l_ascent_lp_code, '?')
 		end l_ascent_lp_code,
 		l_apogee,
@@ -1125,9 +1147,9 @@ from
 			gcat_helper.convert_null_and_trim("Mission"    ) l_mission,
 			gcat_helper.convert_null_and_trim("FlightCode" ) l_flight_code,
 			gcat_helper.convert_null_and_trim("Platform"   ) l_p_code,
-			gcat_helper.convert_null_and_trim("Launch_Site") l_launch_lp_s_code,
+			gcat_helper.convert_null_and_trim("Launch_Site") l_launch_lp_site_code,
 			gcat_helper.convert_null_and_trim("Launch_Pad" ) l_launch_lp_code,
-			gcat_helper.convert_null_and_trim("Ascent_Site") l_ascent_lp_s_code,
+			gcat_helper.convert_null_and_trim("Ascent_Site") l_ascent_lp_site_code,
 			gcat_helper.convert_null_and_trim("Ascent_Pad" ) l_ascent_lp_code,
 			gcat_helper.convert_null_and_trim("Apogee"     ) l_apogee,
 			gcat_helper.convert_null_and_trim("Apoflag"    ) l_apogee_flag,
@@ -1146,10 +1168,10 @@ from
 
 alter table launch add constraint pk_launch primary key (l_launch_tag);
 alter table launch add constraint fk_launch_platform foreign key (l_p_code) references platform(p_code);
-alter table launch add constraint fk_launch_launch_site foreign key (l_launch_lp_s_code) references site(s_code);
-alter table launch add constraint fk_launch_launch_point  foreign key (l_launch_lp_s_code, l_launch_lp_code) references launch_point(lp_s_code, lp_code);
-alter table launch add constraint fk_launch_ascent_site foreign key (l_ascent_lp_s_code) references site(s_code);
-alter table launch add constraint fk_launch_ascent_point foreign key (l_ascent_lp_s_code, l_ascent_lp_code) references launch_point(lp_s_code, lp_code);
+alter table launch add constraint fk_launch_launch_site foreign key (l_launch_lp_site_code) references site(site_code);
+alter table launch add constraint fk_launch_launch_point  foreign key (l_launch_lp_site_code, l_launch_lp_code) references launch_point(lp_site_code, lp_code);
+alter table launch add constraint fk_launch_ascent_site foreign key (l_ascent_lp_site_code) references site(site_code);
+alter table launch add constraint fk_launch_ascent_point foreign key (l_ascent_lp_site_code, l_ascent_lp_code) references launch_point(lp_site_code, lp_code);
 alter table launch add constraint fk_launch_launch_vehicle foreign key (l_lv_name, l_lv_variant) references launch_vehicle(lv_name, lv_variant);
 
 /*
@@ -1292,7 +1314,6 @@ alter table launch_investigator add constraint fk_launch_investigator_launch for
 
 
 --WORLD (including spin data)
-drop table world;
 create table world compress as
 select w_id, w_id_name, w_name, w_alternate_name,
 	gcat_helper.gcat_to_number(w_radius) w_radius,
@@ -1448,225 +1469,343 @@ end;
 /
 
 
---SATELLITE - TODO
-drop table satellite purge;
-
-create table satellite compress as
-select
-	sat_jcat,
-	sat_satcat,
-	sat_piece,
-	sat_type_byte_1,
-	sat_type_byte_2,
-	sat_type_byte_3,
-	sat_type_byte_4,
-	sat_type_byte_5,
-	sat_type_byte_6,
-	sat_type_byte_7,
-	sat_type_byte_8,
-	sat_type_byte_9,
-	sat_name,
-	sat_payload_name,
-	gcat_helper.vague_to_date(sat_launch_date) sat_launch_date,
-	gcat_helper.vague_to_precision(sat_launch_date) sat_launch_date_precision,
-	sat_parent,
-	gcat_helper.vague_to_date(sat_separation_date) sat_separation_date,
-	gcat_helper.vague_to_precision(sat_separation_date) sat_separation_date_precision,
-	sat_primary_w_name,
-	gcat_helper.vague_to_date(sat_destination_date) sat_destination_date,
-	gcat_helper.vague_to_precision(sat_destination_date) sat_destination_date_precision,
-	sat_statusat_phase,
-	sat_destination,
-	sat_state_o_code,
-	sat_bus,
-	sat_motor,
-	gcat_helper.gcat_to_number(sat_mass) sat_mass,
-	sat_massat_flag,
-	gcat_helper.gcat_to_number(sat_dry_mass) sat_dry_mass,
-	sat_dry_massat_flag,
-	gcat_helper.gcat_to_number(sat_total_mass) sat_total_mass,
-	sat_total_massat_flag,
-	gcat_helper.gcat_to_number(sat_length) sat_length,
-	sat_lenght_flag,
-	gcat_helper.gcat_to_number(sat_diameter) sat_diameter,
-	sat_diameter_flag,
-	gcat_helper.gcat_to_number(sat_span) sat_span,
-	sat_span_flag,
-	sat_shape,
-	gcat_helper.vague_to_date(sat_orbit_epoch_date) sat_orbit_epoch_date,
-	gcat_helper.vague_to_precision(sat_orbit_epoch_date) sat_orbit_epoch_date_precision,
-	gcat_helper.gcat_to_number(sat_perigee) sat_perigee,
-	sat_perigee_flag,
-	gcat_helper.gcat_to_binary_double(sat_apogee) sat_apogee,
-	sat_apogee_flag,
-	gcat_helper.gcat_to_number(sat_inclination) sat_inclination,
-	sat_inclination_flag,
-	sat_orbit_type,
-	sat_orbit_quality,
-	sat_alternate_names
+--SATELLITE
+create table satellite nologging as
+select /*+ no_gather_optimizer_statistics */
+	s_catalog,
+	s_jcat,
+	s_satcat,
+	s_piece,
+	s_type_byte_1,
+	s_type_byte_2,
+	s_type_byte_3,
+	s_type_byte_4,
+	s_type_byte_5,
+	s_type_byte_6,
+	s_type_byte_7,
+	s_type_byte_8,
+	s_type_byte_9,
+	s_name,
+	s_payload_name,
+	gcat_helper.vague_to_date(s_launch_date) s_launch_date,
+	gcat_helper.vague_to_precision(s_launch_date) s_launch_date_precision,
+	case
+		when s_parent_s_jcat_or_w_name = 'SEL1' then 'Sun-Earth L1'
+		when s_parent_s_jcat_or_w_name = 'SEL2' then 'Sun-Earth L2'
+		when s_parent_s_jcat_or_w_name = 'HCO' then 'Sun'
+		when s_parent_s_jcat_or_w_name = '(243)' then 'Ida'
+		when s_parent_s_jcat_or_w_name = '(253)' then 'Mathilde'
+		when s_parent_s_jcat_or_w_name = '(951)' then 'Gaspra'
+		when s_parent_s_jcat_or_w_name = '67P/' then 'Churyumov-Gerasimenko'
+		when s_parent_s_jcat_or_w_name = '81P/Wild2' then 'Wild 2'
+		when s_parent_s_jcat_or_w_name = '9P/Tempel1' then 'Tempel 1'
+		when s_parent_s_jcat_or_w_name = 'EML1' then 'Earth-Moon L1'
+		when s_parent_s_jcat_or_w_name = 'EML2' then 'Earth-Moon L2'
+		else s_parent_s_jcat_or_w_name
+	end s_parent_s_jcat_or_w_name,
+	s_parent_port,
+	s_parent_flag,
+	gcat_helper.vague_to_date(s_separation_date) s_separation_date,
+	gcat_helper.vague_to_precision(s_separation_date) s_separation_date_precision,
+	s_primary_w_name,
+	gcat_helper.vague_to_date(s_destination_date) s_destination_date,
+	gcat_helper.vague_to_precision(s_destination_date) s_destination_date_precision,
+	s_status_phase,
+	s_destination,
+	s_state_o_code,
+	s_bus,
+	s_motor,
+	gcat_helper.gcat_to_number(s_mass) s_mass,
+	s_mass_flag,
+	gcat_helper.gcat_to_number(s_dry_mass) s_dry_mass,
+	s_dry_mass_flag,
+	gcat_helper.gcat_to_number(s_total_mass) s_total_mass,
+	s_total_mass_flag,
+	gcat_helper.gcat_to_number(s_length) s_length,
+	s_lenght_flag,
+	gcat_helper.gcat_to_number(s_diameter) s_diameter,
+	s_diameter_flag,
+	gcat_helper.gcat_to_number(s_span) s_span,
+	s_span_flag,
+	s_shape,
+	gcat_helper.vague_to_date(s_orbit_epoch_date) s_orbit_epoch_date,
+	gcat_helper.vague_to_precision(s_orbit_epoch_date) s_orbit_epoch_date_precision,
+	gcat_helper.gcat_to_number(s_perigee) s_perigee,
+	s_perigee_flag,
+	gcat_helper.gcat_to_binary_double(s_apogee) s_apogee,
+	s_apogee_flag,
+	gcat_helper.gcat_to_number(s_inclination) s_inclination,
+	s_inclination_flag,
+	s_orbit_type,
+	s_orbit_quality,
+	s_alternate_names
 from
 (
 	--Fix data issues.
 	select
-		sat_jcat,
-		sat_satcat,
-		sat_piece,
-		sat_type_byte_1,
-		sat_type_byte_2,
-		sat_type_byte_3,
-		sat_type_byte_4,
-		sat_type_byte_5,
-		sat_type_byte_6,
-		sat_type_byte_7,
-		sat_type_byte_8,
-		sat_type_byte_9,
-		sat_name,
-		sat_payload_name,
-		sat_launch_date,
-		sat_parent,
-		sat_separation_date,
-		sat_primary_w_name,
+		s_catalog,
+		s_jcat,
+		s_satcat,
+		s_piece,
+		s_type_byte_1,
+		s_type_byte_2,
+		s_type_byte_3,
+		s_type_byte_4,
+		s_type_byte_5,
+		s_type_byte_6,
+		s_type_byte_7,
+		s_type_byte_8,
+		s_type_byte_9,
+		s_name,
+		s_payload_name,
 		case
-			when sat_destination_date = '2011 Jun   2' then '2011 Jun  2'
-			when sat_destination_date = '2014 Jan   2' then '2014 Jan  2'
-			when sat_destination_date = '2011 Mar  10' then '2011 Mar 10'
-			when sat_destination_date = '2014 Dec   2' then '2014 Dec  2'
-			when sat_destination_date = '2015 Feb   5' then '2015 Feb  5'
-			when sat_destination_date = '2020 Oct  15' then '2020 Oct 15'
-			when sat_destination_date = '2021 Sep  10 0900?' then '2021 Sep 10 0900?'
-			else sat_destination_date
-		end sat_destination_date,
-		sat_statusat_phase,
-		sat_destination,
-		sat_state_o_code,
-		sat_bus,
-		sat_motor,
-		sat_mass,
-		sat_massat_flag,
-		sat_dry_mass,
-		sat_dry_massat_flag,
-		sat_total_mass,
-		sat_total_massat_flag,
-		sat_length,
-		sat_lenght_flag,
-		sat_diameter,
-		sat_diameter_flag,
-		sat_span,
-		sat_span_flag,
-		sat_shape,
-		sat_orbit_epoch_date,
-		sat_perigee,
-		sat_perigee_flag,
-		sat_apogee,
-		sat_apogee_flag,
-		sat_inclination,
-		sat_inclination_flag,
-		sat_orbit_type,
-		sat_orbit_quality,
-		sat_alternate_names
+			when s_launch_date = '1963 Jun   5' then '1963 Jun  5'
+			when s_launch_date = '1963 Jun  25' then '1963 Jun 25'
+			when s_launch_date = '1963 Jun  26' then '1963 Jun 26'
+			else s_launch_date
+		end s_launch_date,
+		--Everything up to the first space and remove any asterisks.
+		replace(regexp_substr(s_parent, '[^ ]+'), '*') s_parent_s_jcat_or_w_name,
+		--Everything after the spaces and remove any asterisks
+		trim(regexp_substr(s_parent, '\s+.*', 1, 1)) s_parent_port,
+		--Is there an asterisk or not?
+		case when s_parent like '%*%' then '*' else null end s_parent_flag,
+		case
+			--I'm guessing for some of these dates.
+			when s_separation_date like '%Jan  0' then replace(s_separation_date, 'Jan  0', 'Jan')
+			when s_separation_date like '%Jan 00' then replace(s_separation_date, 'Jan 00', 'Jan')
+			when s_separation_date like '%Apr  0' then replace(s_separation_date, 'Apr  0', 'Apr')
+			when s_separation_date like '%Mar  0' then replace(s_separation_date, 'Mar  0', 'Mar')
+			when s_separation_date = '2002 Jan 16 0705s' then '2002 Jan 16 0705'
+			when s_separation_date = '2000 Nov  5  2000?' then '2000 Nov  5 2000?'
+			else s_separation_date
+		end s_separation_date,
+		s_primary_w_name,
+		case
+			when s_destination_date = '2011 Jun   2' then '2011 Jun  2'
+			when s_destination_date = '2014 Jan   2' then '2014 Jan  2'
+			when s_destination_date = '2011 Mar  10' then '2011 Mar 10'
+			when s_destination_date = '2014 Dec   2' then '2014 Dec  2'
+			when s_destination_date = '2015 Feb   5' then '2015 Feb  5'
+			when s_destination_date = '2020 Oct  15' then '2020 Oct 15'
+			when s_destination_date = '1971 May  16' then '1971 May 16'
+			when s_destination_date = '2011 Feb   2' then '2011 Feb  2'
+			when s_destination_date = '2009 Jan  0'  then '2009 Jan 01'
+			when s_destination_date = '2019 May  16'  then '2019 May 16'
+			when s_destination_date like '%Mar  0' then replace(s_destination_date, 'Mar  0', 'Mar')
+			when s_destination_date = '2021 Sep  10 0900?' then '2021 Sep 10 0900?'
+			else s_destination_date
+		end s_destination_date,
+		s_status_phase,
+		s_destination,
+		s_state_o_code,
+		s_bus,
+		s_motor,
+		s_mass,
+		s_mass_flag,
+		s_dry_mass,
+		s_dry_mass_flag,
+		s_total_mass,
+		s_total_mass_flag,
+		s_length,
+		s_lenght_flag,
+		s_diameter,
+		s_diameter_flag,
+		s_span,
+		s_span_flag,
+		s_shape,
+		case
+			when s_orbit_epoch_date = '1973 Jan  13' then '1973 Jan 13'
+			when s_orbit_epoch_date = '2011 Aug  16' then '2011 Aug 16'
+			else s_orbit_epoch_date
+		end s_orbit_epoch_date,
+		s_perigee,
+		s_perigee_flag,
+		s_apogee,
+		s_apogee_flag,
+		s_inclination,
+		s_inclination_flag,
+		s_orbit_type,
+		s_orbit_quality,
+		s_alternate_names
 	from
 	(
 		--Rename columns.
 		select
-			gcat_helper.convert_null_and_trim("JCAT"              ) sat_jcat,
-			gcat_helper.convert_null_and_trim("Satcat"            ) sat_satcat,
-			gcat_helper.convert_null_and_trim("Piece"             ) sat_piece,
-			gcat_helper.convert_null_and_trim(substr("Type", 1, 1)) sat_type_byte_1,
-			gcat_helper.convert_null_and_trim(substr("Type", 2, 1)) sat_type_byte_2,
-			gcat_helper.convert_null_and_trim(substr("Type", 3, 1)) sat_type_byte_3,
-			gcat_helper.convert_null_and_trim(substr("Type", 4, 1)) sat_type_byte_4,
-			gcat_helper.convert_null_and_trim(substr("Type", 5, 1)) sat_type_byte_5,
-			gcat_helper.convert_null_and_trim(substr("Type", 6, 1)) sat_type_byte_6,
-			gcat_helper.convert_null_and_trim(substr("Type", 7, 1)) sat_type_byte_7,
-			gcat_helper.convert_null_and_trim(substr("Type", 8, 1)) sat_type_byte_8,
-			gcat_helper.convert_null_and_trim(substr("Type", 9, 1)) sat_type_byte_9,
-			gcat_helper.convert_null_and_trim("Name"              ) sat_name,
-			gcat_helper.convert_null_and_trim("PLName"            ) sat_payload_name,
-			gcat_helper.convert_null_and_trim("LDate"             ) sat_launch_date,
-			gcat_helper.convert_null_and_trim("Parent"            ) sat_parent, --TODO: 	"the parent can be an extended JCAT ID (EJCAT) or a body name."
-			gcat_helper.convert_null_and_trim("SDate"             ) sat_separation_date,
-			gcat_helper.convert_null_and_trim("Primary"           ) sat_primary_w_name,
-			gcat_helper.convert_null_and_trim("DDate"             ) sat_destination_date,
-			gcat_helper.convert_null_and_trim("Status"            ) sat_statusat_phase,
-			gcat_helper.convert_null_and_trim("Dest"              ) sat_destination,
-			gcat_helper.convert_null_and_trim("State"             ) sat_state_o_code,
-			gcat_helper.convert_null_and_trim("Bus"               ) sat_bus,
-			gcat_helper.convert_null_and_trim("Motor"             ) sat_motor,
-			gcat_helper.convert_null_and_trim("Mass"              ) sat_mass,
-			gcat_helper.convert_null_and_trim("MassFlag"          ) sat_massat_flag,
-			gcat_helper.convert_null_and_trim("DryMass"           ) sat_dry_mass,
-			gcat_helper.convert_null_and_trim("DryFlag"           ) sat_dry_massat_flag,
-			gcat_helper.convert_null_and_trim("TotMass"           ) sat_total_mass,
-			gcat_helper.convert_null_and_trim("TotFlag"           ) sat_total_massat_flag,
-			gcat_helper.convert_null_and_trim("Length"            ) sat_length,
-			gcat_helper.convert_null_and_trim("LFlag"             ) sat_lenght_flag,
-			gcat_helper.convert_null_and_trim("Diameter"          ) sat_diameter,
-			gcat_helper.convert_null_and_trim("DFlag"             ) sat_diameter_flag,
-			gcat_helper.convert_null_and_trim("Span"              ) sat_span,
-			gcat_helper.convert_null_and_trim("SpanFlag"          ) sat_span_flag,
-			gcat_helper.convert_null_and_trim("Shape"             ) sat_shape,
-			gcat_helper.convert_null_and_trim("ODate"             ) sat_orbit_epoch_date,
-			gcat_helper.convert_null_and_trim("Perigee"           ) sat_perigee,
-			gcat_helper.convert_null_and_trim("PF"                ) sat_perigee_flag,
-			gcat_helper.convert_null_and_trim("Apogee"            ) sat_apogee,
-			gcat_helper.convert_null_and_trim("AF"                ) sat_apogee_flag,
-			gcat_helper.convert_null_and_trim("Inc"               ) sat_inclination,
-			gcat_helper.convert_null_and_trim("IF"                ) sat_inclination_flag,
-			gcat_helper.convert_null_and_trim("OpOrbit"           ) sat_orbit_type,
-			gcat_helper.convert_null_and_trim("OQUAL"             ) sat_orbit_quality,
-			gcat_helper.convert_null_and_trim("AltNames"          ) sat_alternate_names
-		from satcat_staging
+			s_catalog,
+			gcat_helper.convert_null_and_trim("JCAT"              ) s_jcat,
+			gcat_helper.convert_null_and_trim("Satcat"            ) s_satcat,
+			gcat_helper.convert_null_and_trim("Piece"             ) s_piece,
+			gcat_helper.convert_null_and_trim(substr("Type", 1, 1)) s_type_byte_1,
+			gcat_helper.convert_null_and_trim(substr("Type", 2, 1)) s_type_byte_2,
+			gcat_helper.convert_null_and_trim(substr("Type", 3, 1)) s_type_byte_3,
+			gcat_helper.convert_null_and_trim(substr("Type", 4, 1)) s_type_byte_4,
+			gcat_helper.convert_null_and_trim(substr("Type", 5, 1)) s_type_byte_5,
+			gcat_helper.convert_null_and_trim(substr("Type", 6, 1)) s_type_byte_6,
+			gcat_helper.convert_null_and_trim(substr("Type", 7, 1)) s_type_byte_7,
+			gcat_helper.convert_null_and_trim(substr("Type", 8, 1)) s_type_byte_8,
+			gcat_helper.convert_null_and_trim(substr("Type", 9, 1)) s_type_byte_9,
+			gcat_helper.convert_null_and_trim("Name"              ) s_name,
+			gcat_helper.convert_null_and_trim("PLName"            ) s_payload_name,
+			gcat_helper.convert_null_and_trim("LDate"             ) s_launch_date,
+			gcat_helper.convert_null_and_trim("Parent"            ) s_parent,
+			gcat_helper.convert_null_and_trim("SDate"             ) s_separation_date,
+			gcat_helper.convert_null_and_trim("Primary"           ) s_primary_w_name,
+			gcat_helper.convert_null_and_trim("DDate"             ) s_destination_date,
+			gcat_helper.convert_null_and_trim("Status"            ) s_status_phase,
+			gcat_helper.convert_null_and_trim("Dest"              ) s_destination,
+			gcat_helper.convert_null_and_trim("State"             ) s_state_o_code,
+			gcat_helper.convert_null_and_trim("Bus"               ) s_bus,
+			gcat_helper.convert_null_and_trim("Motor"             ) s_motor,
+			gcat_helper.convert_null_and_trim("Mass"              ) s_mass,
+			gcat_helper.convert_null_and_trim("MassFlag"          ) s_mass_flag,
+			gcat_helper.convert_null_and_trim("DryMass"           ) s_dry_mass,
+			gcat_helper.convert_null_and_trim("DryFlag"           ) s_dry_mass_flag,
+			gcat_helper.convert_null_and_trim("TotMass"           ) s_total_mass,
+			gcat_helper.convert_null_and_trim("TotFlag"           ) s_total_mass_flag,
+			gcat_helper.convert_null_and_trim("Length"            ) s_length,
+			gcat_helper.convert_null_and_trim("LFlag"             ) s_lenght_flag,
+			gcat_helper.convert_null_and_trim("Diameter"          ) s_diameter,
+			gcat_helper.convert_null_and_trim("DFlag"             ) s_diameter_flag,
+			gcat_helper.convert_null_and_trim("Span"              ) s_span,
+			gcat_helper.convert_null_and_trim("SpanFlag"          ) s_span_flag,
+			gcat_helper.convert_null_and_trim("Shape"             ) s_shape,
+			gcat_helper.convert_null_and_trim("ODate"             ) s_orbit_epoch_date,
+			gcat_helper.convert_null_and_trim("Perigee"           ) s_perigee,
+			gcat_helper.convert_null_and_trim("PF"                ) s_perigee_flag,
+			gcat_helper.convert_null_and_trim("Apogee"            ) s_apogee,
+			gcat_helper.convert_null_and_trim("AF"                ) s_apogee_flag,
+			gcat_helper.convert_null_and_trim("Inc"               ) s_inclination,
+			gcat_helper.convert_null_and_trim("IF"                ) s_inclination_flag,
+			gcat_helper.convert_null_and_trim("OpOrbit"           ) s_orbit_type,
+			gcat_helper.convert_null_and_trim("OQUAL"             ) s_orbit_quality,
+			gcat_helper.convert_null_and_trim("AltNames"          ) s_alternate_names
+		from
+		(
+			select 'auxcat'  s_catalog, auxcat_staging.*  from auxcat_staging  union all
+			select 'csocat'  s_catalog, csocat_staging.*  from csocat_staging  union all
+			select 'deepcat' s_catalog, deepcat_staging.* from deepcat_staging union all
+			select 'ecat'    s_catalog, ecat_staging.*    from ecat_staging    union all
+			select 'ftocat'  s_catalog, ftocat_staging.*  from ftocat_staging  union all
+			select 'hcocat'  s_catalog, hcocat_staging.*  from hcocat_staging  union all
+			select 'lcat'    s_catalog, lcat_staging.*    from lcat_staging    union all
+			select 'lprcat'  s_catalog, lprcat_staging.*  from lprcat_staging  union all
+			select 'rcat'    s_catalog, rcat_staging.*    from rcat_staging    union all
+			select 'satcat'  s_catalog, satcat_staging.*  from satcat_staging  union all
+			select 'tmpcat'  s_catalog, tmpcat_staging.*  from tmpcat_staging
+		)
 	) rename_columns
-) fix_data;
+) fix_data
+order by 1,2,3;
 
-alter table satellite add constraint pk_satellite primary key(sat_jcat);
-alter table satellite add constraint fk_satellite_state_org foreign key (sat_state_o_code) references organization(o_code);
+alter table satellite add constraint fk_satellite_state_org foreign key (s_state_o_code) references organization(o_code);
+--Too many duplicates. No good primary key for this table?
+--alter table satellite add constraint pk_satellite primary key(s_jcat);
+create index satellite_idx1 on satellite(s_jcat);
+alter table satellite modify s_jcat not null;
+
+--Ensure all parents exist.
+--Can't use a foreign key because of the weird table structures.
+begin
+	for missing_parents in
+	(
+		select *
+		from
+		(
+			select s_catalog, s_jcat, s_parent_s_jcat_or_w_name
+			from satellite
+			where s_parent_s_jcat_or_w_name is not null
+		) satellites
+		left join
+		(
+			select s_jcat from satellite
+			union all
+			select w_name from world
+		) parents
+			on satellites.s_parent_s_jcat_or_w_name = parents.s_jcat
+		where parents.s_jcat is null
+		order by 1
+	) loop
+		raise_application_error(-20000, 'This Parent value does not match: ' || missing_parents.s_parent_s_jcat_or_w_name);
+	end loop;
+end;
+/
 
 
 --SATELLITE_OWNER_ORG
-drop table satellite_owner_org;
 create table satellite_owner_org compress as
-select cast("JCAT" as varchar2(100)) soo_sat_jcat, rtrim(column_value, '?') soo_o_code
+select cast("JCAT" as varchar2(100)) soo_s_jcat, rtrim(column_value, '?') soo_o_code
 from satcat_staging
 cross join gcat_helper.get_nt_from_list("Owner", '/')
 where "Owner" <> '-'
 order by 1,2;
 
-alter table satellite_owner_org add constraint pk_satellite_owner_org primary key(soo_sat_jcat, soo_o_code);
-alter table satellite_owner_org add constraint fk_satellite_owner_org_satellite foreign key(soo_sat_jcat) references satellite(sat_jcat);
+alter table satellite_owner_org add constraint pk_satellite_owner_org primary key(soo_s_jcat, soo_o_code);
 alter table satellite_owner_org add constraint fk_satellite_owner_org_organization foreign key(soo_o_code) references organization(o_code);
+--Too many duplicates for foreign key.
+--alter table satellite_owner_org add constraint fk_satellite_owner_org_satellite foreign key(soo_s_jcat) references satellite(s_jcat);
 
 
 --SATELLITE_MANUFACTURER_ORG
-drop table satellite_manufacturer_org;
 create table satellite_manufacturer_org compress as
-select cast("JCAT" as varchar2(100)) smo_sat_jcat, rtrim(column_value, '?') smo_o_code
+select cast("JCAT" as varchar2(100)) smo_s_jcat, rtrim(column_value, '?') smo_o_code
 from satcat_staging
 cross join gcat_helper.get_nt_from_list(rtrim("Manufacturer", '?'), '/')
 where "Manufacturer" <> '-'
 order by 1,2;
 
-alter table satellite_manufacturer_org add constraint pk_satellite_manufacturer_org primary key(smo_sat_jcat, smo_o_code);
-alter table satellite_manufacturer_org add constraint fk_satellite_manufacturer_org_satellite foreign key(smo_sat_jcat) references satellite(sat_jcat);
+alter table satellite_manufacturer_org add constraint pk_satellite_manufacturer_org primary key(smo_s_jcat, smo_o_code);
+--Too many duplicates for foreign key.
+--alter table satellite_manufacturer_org add constraint fk_satellite_manufacturer_org_satellite foreign key(smo_s_jcat) references satellite(s_jcat);
 alter table satellite_manufacturer_org add constraint fk_satellite_manufacturer_org_organization foreign key(smo_o_code) references organization(o_code);
 
 
 
 
-select * from family_staging;
-select * from sites_staging order by "Site";
-select * from platforms_staging order by "Code";
-select * from lp_staging order by "Site";
-select * from orgs_staging order by "Code";
+
+-- TODO: Payload objects?
 
 
-select * from user_constraints where r_constraint_name like '%PLATFORM%';
+select * from PAUXCAT_STAGING union all
+select * from PFTOCAT_STAGING union all
+select * from PLCAT_STAGING union all
+select * from PSATCAT_STAGING;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /*
 TODO, in this order
-SATELLITE
-SATELLITE_ORG
 ENGINE
 STAGE
 LAUNCH_VEHICLE_STAGE
