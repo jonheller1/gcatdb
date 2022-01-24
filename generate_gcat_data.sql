@@ -1900,6 +1900,7 @@ order by p_name;
 declare
 	p_table_name varchar2(128) := upper('ORGANIZATION');
 	v_max_size number;
+	v_ddl varchar2(32767);
 begin
 	--Alter each table.
 	for i in 1 .. gcat_helper.c_ordered_objects.count loop
@@ -1915,34 +1916,16 @@ begin
 			order by 1
 		) loop
 			execute immediate varchar2_columns.v_select into v_max_size;
-			execute immediate replace(varchar2_columns.v_alter, '?', v_max_size);
+			--Only shrink column if there is data in it.
+			if v_max_size is not null then
+				v_ddl := replace(varchar2_columns.v_alter, '?', v_max_size);
+				begin
+					execute immediate v_ddl;
+				exception when others then
+					raise_application_error(-20000, 'Problem with this DDL: ' || v_ddl || chr(10) || sqlerrm);
+				end;
+			end if;
 		end loop;
-	end loop;
-end;
-/
-
-
-
-
---------------------------------------------------------------------------------
--- Populate cloud database.
---------------------------------------------------------------------------------
-
-
--- Create public synonyms and grants.
-begin
-	for tables in
-	(
-		select
-			'create or replace public synonym ' || object_name || ' for space.' || object_name v_synonym_sql,
-			'grant select on space.'||object_name||' to OPENSPACE' v_grant_sql
-		from dba_objects
-		where owner = 'SPACE'
-			and object_type not in ('INDEX')
-		order by object_name
-	) loop
-		execute immediate tables.v_synonym_sql;
-		execute immediate tables.v_grant_sql;
 	end loop;
 end;
 /
@@ -1987,6 +1970,7 @@ begin
 end;
 /
 
+
 --Create a profile that won't lock or expire, and won't allow more
 --than 10 seconds of CPU per statement. (These small tables shouldn't require much time.)
 -- (It would be nice to allow simple password but ATP simply doesn't allow it.)
@@ -1996,27 +1980,59 @@ begin
 		password_verify_function null
 		failed_login_attempts unlimited
 		password_life_time unlimited
-		--cpu_per_call 1000
+		cpu_per_call 10000
 	');
 end;
 /
 
+
 --Create a public user to access GCAT data.
---(This read-only password is public knowledge.)
+--(This read-only password is psuedo-public knowledge.)
 begin
 	dbms_utility.exec_ddl_statement@gcat('create user gcat_public identified by public_gcat#1A profile gcat_public_profile quota 1M on data');
 	dbms_utility.exec_ddl_statement@gcat('grant create session to gcat_public');
 end;
 /
 
+
 --Create a simple table that will appear on the initial login, for users who didn't read anything else.
 begin
-	dbms_utility.exec_ddl_statement@gcat(q'[create table gcat_public.readme as select 'Test.' readme from dual]');
+	dbms_utility.exec_ddl_statement@gcat(
+	q'[
+		create table gcat_public.readme as
+		select 'This is a database and query tool built on top of Jonathan C. McDowell''s GCAT: General Catalog of Artificial Space Objects.
+		To understand the data you should first read his website: https://planet4589.org/space/gcat/index.html
+		
+		The database code was created by Jon Heller.
+		(TODO - See GitHub link?)
+		Questions about how to query the data can be sent to me at jon@jonheller.org
+		' readme from dual
+	]');
 end;
 /
 
---TODO: Create triggers preventing altering or modifying any tables on GCAT_PUBLIC.
 
+--Prevent user from altering objects or modifying data.
+begin
+	dbms_utility.exec_ddl_statement@gcat(
+	q'[
+		create or replace trigger prevent_user_from_altering_objects
+		before ddl on gcat_public.schema
+		begin
+			raise_application_error(-20000, 'Please do not try to alter any objects on this system.');
+		end;
+	]');
+
+	dbms_utility.exec_ddl_statement@gcat(
+	q'[
+		create or replace trigger prevent_user_from_modifying_data
+		before insert or update or delete on gcat_public.readme
+		begin
+			raise_application_error(-20000, 'Please do not try to modify the data on this system.');
+		end;
+	]');
+end;
+/
 
 
 --Prevent public user from changing the public password.
@@ -2042,6 +2058,7 @@ begin
 	]');
 end;
 /
+
 
 --Enable SQL Developer Web access.
 --(To rollback: ords_admin.drop_rest_for_schema(p_schema => 'GCAT_PUBLIC');
@@ -2200,3 +2217,4 @@ begin
 	create_public_synonyms_and_grants;
 end;
 /
+
