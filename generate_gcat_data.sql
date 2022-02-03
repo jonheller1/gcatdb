@@ -22,72 +22,10 @@ Cloud database users:
 	gcat - owns objects and data
 	opengcat - read-only connection open to the public
 
-
 Local database packages:
 	todo:
 	gcat_helper
 	gcat_loader
-
-Column names:
-	Column names have a unique prefix plus the rest of the name based on the GCAT name. The prefix helps identify the source of the column in complicated SQL statements where there would otherwise be multiple columns with the same name.
-	Names that are normal words are separated by an underscore. For example, "ShortName" becomes short_name, but "EName" stays as ename.
-	Names that reference other columns have that column in the name. For example, the "Parent" column in ORGANIZATION is named "O_PARENT_O_CODE", to make it obvious which column it references.
-
-Instances whewre GCAT text data does not perfectly map the relational model of the GCATDB:
-	Vague dates, which contain both date and precision, were converted to two separate columns to store the date and precision.
-	"sites.tsv"."Site" is stored as SITE.S_CODE. (While "sites.tsv" has an empty "Code" for backwards compatibility, the database prefers name consistency over text file backwards compatibility.
-	spin.tsv was combind into worlds.tsv to make a single WORLD table.
-	Most number string are converted to numbers. Values that might include infinity, such as the satellite apogee, are stored as BINARY_DOUBLE which supports infinity.
-
-
-Tables:
-
-
-LAUNCH
-	LAUNCH_AGENCY_ORG
-	LAUNCH_PAYLOAD_ORG
-	LAUNCH_INVESTIGATOR
-
-SATELLITE
-	SATELLITE_OWNER_ORG
-	SATELLITE_MANUFACTURER_ORG
-
-PAYLOAD
-
-ORGANIZATION
-	ORGANIZATION_ORG_TYPE
-		ORGANIZATION_TYPE
-
-SITE
-	SITE_ORG
-
-PLATFORM
-	PLATFORM_ORG
-
-LAUNCH_POINT
-	LAUNCH_POINT_ORG
-
-LAUNCH_VEHICLE
-	LAUNCH_VEHICLE_ORG
-	LAUNCH_VEHICLE_FAMILY
-
-STAGE
-	STAGE_MANUFACTURER
-
-PROPELLANT
-
-ENGINE
-	ENGINE_MANUFACTURER
-	ENGINE_PROPELLANT
-
-LAUNCH_VEHICLE_STAGE
-
-REFERENCE
-
-WORLD
-;
-
-
 
 
 --------------------------------------------------------------------------------
@@ -1782,18 +1720,6 @@ alter table satellite_manufacturer_org add constraint pk_satellite_manufacturer_
 alter table satellite_manufacturer_org add constraint fk_satellite_manufacturer_org_organization foreign key(smo_o_code) references organization(o_code);
 
 
-
-
-
-
-
-
-
-
--- TODO: Payload objects?
-
-drop table payload purge;
-
 --PAYLOAD
 drop table payload purge;
 create table payload nologging as
@@ -1816,8 +1742,12 @@ select /*+ no_gather_optimizer_statistics */
 	pay_Att,
 	pay_Mvr,
 	pay_Class,
-	pay_Category,
-	pay_UNState,
+	replace(replace(replace(pay_UNState, '*'), '['), ']') pay_UNState_o_code,
+	case
+		when pay_unstate is null then null
+		when pay_unstate like '%[%]%' then 'Yes'
+		else 'No'
+	end pay_is_registered,
 	pay_UNReg,
 	gcat_helper.gcat_to_number(pay_UNPeriod) pay_UNPeriod,
 	gcat_helper.gcat_to_number(pay_UNPerigee) pay_UNPerigee,
@@ -1825,7 +1755,6 @@ select /*+ no_gather_optimizer_statistics */
 	gcat_helper.gcat_to_number(pay_UNInc) pay_UNInc,
 	pay_Result,
 	pay_Control,
-	pay_Discipline,
 	pay_Comment
 from
 (
@@ -1846,9 +1775,12 @@ from
 		pay_Program,
 		pay_Plane,
 		pay_Att,
-		pay_Mvr,
+		--FIX:
+		case
+			when pay_Mvr = 'm' then 'M'
+			else pay_Mvr
+		end pay_Mvr,
 		pay_Class,
-		pay_Category,
 		pay_UNState,
 		pay_UNReg,
 		pay_UNPeriod,
@@ -1857,7 +1789,6 @@ from
 		pay_UNInc,
 		pay_Result,
 		pay_Control,
-		pay_Discipline,
 		pay_Comment
 	from
 	(
@@ -1877,7 +1808,6 @@ from
 			gcat_helper.convert_null_and_trim("Att"       ) pay_Att,
 			gcat_helper.convert_null_and_trim("Mvr"       ) pay_Mvr,
 			gcat_helper.convert_null_and_trim("Class"     ) pay_Class,
-			gcat_helper.convert_null_and_trim("Category"  ) pay_Category,
 			gcat_helper.convert_null_and_trim("UNState"   ) pay_UNState,
 			gcat_helper.convert_null_and_trim("UNReg"     ) pay_UNReg,
 			gcat_helper.convert_null_and_trim("UNPeriod"  ) pay_UNPeriod,
@@ -1886,7 +1816,6 @@ from
 			gcat_helper.convert_null_and_trim("UNInc"     ) pay_UNInc,
 			gcat_helper.convert_null_and_trim("Result"    ) pay_Result,
 			gcat_helper.convert_null_and_trim("Control"   ) pay_Control,
-			gcat_helper.convert_null_and_trim("Discipline") pay_Discipline,
 			gcat_helper.convert_null_and_trim("Comment"   ) pay_Comment
 		from
 		(
@@ -1899,45 +1828,51 @@ from
 ) fix_data
 order by 1,2,3;
 
-select * from payload;
-
-alter table payload add constraint fk_satellite_state_org foreign key (s_state_o_code) references organization(o_code);
---Too many duplicates. No good primary key for this table?
---alter table satellite add constraint pk_satellite primary key(s_jcat);
-create index satellite_idx1 on satellite(s_jcat);
-alter table satellite modify s_jcat not null;
+alter table payload add constraint pk_payload primary key(pay_jcat);
+alter table payload add constraint fk_payload_org foreign key (pay_UNState_o_code) references organization(o_code);
 
 
+--PAYLOAD_CATEGORY
+drop table payload_category purge;
+create table payload_category nologging as
+select
+	cast("JCAT" as varchar2(100)) pc_pay_jcat,
+	rtrim(rtrim(column_value, '?'), '*') pc_category,
+	case when column_value like '%*%' then 'Yes' else 'No' end pc_is_secret
+from
+(
+	select 'pauxcat' pay_catalog, pauxcat_staging.* from pauxcat_staging union all
+	select 'pftocat' pay_catalog, pftocat_staging.* from pftocat_staging union all
+	select 'plcat'   pay_catalog, plcat_staging.*   from plcat_staging union all
+	select 'psatcat' pay_catalog, psatcat_staging.* from psatcat_staging
+)
+cross join gcat_helper.get_nt_from_list(rtrim("Category", '?'), '/')
+where "Category" <> '-'
+order by 1,2;
+
+alter table payload_category add constraint pk_payload_category primary key(pc_pay_jcat, pc_category);
+alter table payload_category add constraint fk_payload_category_payload foreign key(pc_pay_jcat) references payload(pay_jcat);
 
 
+--PAYLOAD_DISCIPLINE
+drop table payload_discipline purge;
+create table payload_discipline nologging as
+select
+	cast("JCAT" as varchar2(100)) pd_pay_jcat,
+	replace(replace(column_value, '?'), '*') pd_discipline
+from
+(
+	select 'pauxcat' pay_catalog, pauxcat_staging.* from pauxcat_staging union all
+	select 'pftocat' pay_catalog, pftocat_staging.* from pftocat_staging union all
+	select 'plcat'   pay_catalog, plcat_staging.*   from plcat_staging union all
+	select 'psatcat' pay_catalog, psatcat_staging.* from psatcat_staging
+)
+cross join gcat_helper.get_nt_from_list(rtrim("Discipline", '?'), '/')
+where "Discipline" <> '-'
+order by 1,2;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+alter table payload_discipline add constraint pk_payload_discipline primary key(pd_pay_jcat, pd_discipline);
+alter table payload_discipline add constraint fk_payload_discipline_payload foreign key(pd_pay_jcat) references payload(pay_jcat);
 
 
 
