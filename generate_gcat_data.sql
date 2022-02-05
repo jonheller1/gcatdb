@@ -26,6 +26,7 @@ Local database packages:
 	todo:
 	gcat_helper
 	gcat_loader
+;
 
 
 --------------------------------------------------------------------------------
@@ -38,7 +39,7 @@ select 'engines.tsv'   file_name, 'ENGINES_STAGING'   staging_table_name,  1347 
 select 'orgs.tsv'      file_name, 'ORGS_STAGING'      staging_table_name,  3270 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/orgs.tsv'      url, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual union all
 select 'sites.tsv'     file_name, 'SITES_STAGING'     staging_table_name,   660 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/sites.tsv'     url, '#Site	Code	UCode	Type	StateCode	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	Group	UName' from dual union all
 select 'platforms.tsv' file_name, 'PLATFORMS_STAGING' staging_table_name,   360 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/platforms.tsv' url, '#Code	UCode	StateCode	Type	Class	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	VClass	VClassID	VID	Group	UName' from dual union all
-select 'lp.tsv'        file_name, 'LP_STAGING'        staging_table_name,  2700 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/lp'            url, '#Site	Code	UCode	Type	StateCode	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual union all
+select 'lp.tsv'        file_name, 'LP_STAGING'        staging_table_name,  2700 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/lp.tsv'        url, '#Site	Code	UCode	Type	StateCode	TStart	TStop	ShortName	Name	Location	Longitude	Latitude	Error	Parent	ShortEName	EName	UName' from dual union all
 select 'family.tsv'    file_name, 'FAMILY_STAGING'    staging_table_name,   615 min_expected_rows, 'https://planet4589.org/space/gcat/data/tables/family.tsv'   url, '#Family' from dual union all
 select 'lv.tsv'        file_name, 'LV_STAGING'        staging_table_name,  1660 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/lv.tsv'        url, '#LV_Name	LV_Family	LV_Manufacturer	LV_Variant	LV_Alias	LV_Min_Stage	LV_Max_Stage	Length	LFlag	Diameter	DFlag	Launch_Mass	MFlag	LEO_Capacity	GTO_Capacity	TO_Thrust	Class	Apogee	Range' from dual union all
 select 'refs.tsv'      file_name, 'REFS_STAGING'      staging_table_name,  3050 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/refs.tsv'      url, '#Cite	Reference' from dual union all
@@ -290,7 +291,7 @@ grant alter on sys.gcat_curl_job to jheller;
 
 
 --------------------------------------------------------------------------------
--- Download the files into the directory. Takes about 9 seconds.
+-- Download the files into the directory. Takes about 1 minute.
 -- (Must run this, and everything below, as your normal user.)
 --------------------------------------------------------------------------------
 
@@ -311,7 +312,7 @@ begin
 		from gcat_config_vw
 		--TEMP for TESTING - only use one file.
 		--where file_name = 'satcat.tsv'
-		where file_name like '%cat%'
+		--where file_name like '%lp.tsv%'
 		order by file_name
 	) loop
 		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 1, argument_value => '--output');
@@ -528,22 +529,22 @@ end;
 
 --ORGANIZATION_TYPE:
 create table organization_type compress as
-select 'CY'  ot_code, 'Country (i.e. nation-state or autonomous region)'                                                                                              ot_description, 'States and similar entities' ot_group from dual union all
-select 'IGO' ot_code, 'Intergovernmental organization. Treated as equivalent to a country for the purposes of tabulations of launches by country etc.'                ot_description, 'States and similar entities' ot_group from dual union all 
-select 'AP'  ot_code, 'Astronomical Polity: e.g. Luna, Mars. Used for the ''country'' field for locations that are not on Earth and therefore don''t have a country.' ot_description, 'States and similar entities' ot_group from dual union all
-select 'E'   ot_code, 'Engine manufacturer'                                                                                                                           ot_description, 'Manufacturers'               ot_group from dual union all
-select 'LV'  ot_code, 'Launch vehicle manufacturer'                                                                                                                   ot_description, 'Manufacturers'               ot_group from dual union all
-select 'W'   ot_code, 'Meteorological rocket launch agency or manufacturer'                                                                                           ot_description, 'Manufacturers'               ot_group from dual union all
-select 'PL'  ot_code, 'Payload manufacturer'                                                                                                                          ot_description, 'Manufacturers'               ot_group from dual union all
-select 'LA'  ot_code, 'Launch Agency'                                                                                                                                 ot_description, 'Operators'                    ot_group from dual union all
-select 'S'   ot_code, 'Suborbital payload operator'                                                                                                                   ot_description, 'Operators'                    ot_group from dual union all
-select 'O'   ot_code, 'Payload owner'                                                                                                                                 ot_description, 'Operators'                    ot_group from dual union all
-select 'P'   ot_code, 'Parent organization of another entry'                                                                                                          ot_description, 'Operators'                    ot_group from dual union all
-select 'LS'  ot_code, 'Launch site'                                                                                                                                   ot_description, 'Launch origin or destination' ot_group from dual union all
-select 'LP'  ot_code, 'Launch position'                                                                                                                               ot_description, 'Launch origin or destination' ot_group from dual union all
-select 'LC'  ot_code, 'Launch cruise'                                                                                                                                 ot_description, 'Launch origin or destination' ot_group from dual union all
-select 'LZ'  ot_code, 'Launch zone'                                                                                                                                   ot_description, 'Launch origin or destination' ot_group from dual union all
-select 'TGT' ot_code, 'Suborbital target area'                                                                                                                        ot_description, 'Launch origin or destination' ot_group from dual;
+select 'CY'  ot_code, 'Country (i.e. nation-state or autonomous region)'                                                                                              ot_meaning, 'States and similar entities'  ot_group from dual union all
+select 'IGO' ot_code, 'Intergovernmental organization. Treated as equivalent to a country for the purposes of tabulations of launches by country etc.'                ot_meaning, 'States and similar entities'  ot_group from dual union all 
+select 'AP'  ot_code, 'Astronomical Polity: e.g. Luna, Mars. Used for the ''country'' field for locations that are not on Earth and therefore don''t have a country.' ot_meaning, 'States and similar entities'  ot_group from dual union all
+select 'E'   ot_code, 'Engine manufacturer'                                                                                                                           ot_meaning, 'Manufacturers'                ot_group from dual union all
+select 'LV'  ot_code, 'Launch vehicle manufacturer'                                                                                                                   ot_meaning, 'Manufacturers'                ot_group from dual union all
+select 'W'   ot_code, 'Meteorological rocket launch agency or manufacturer'                                                                                           ot_meaning, 'Manufacturers'                ot_group from dual union all
+select 'PL'  ot_code, 'Payload manufacturer'                                                                                                                          ot_meaning, 'Manufacturers'                ot_group from dual union all
+select 'LA'  ot_code, 'Launch Agency'                                                                                                                                 ot_meaning, 'Operators'                    ot_group from dual union all
+select 'S'   ot_code, 'Suborbital payload operator'                                                                                                                   ot_meaning, 'Operators'                    ot_group from dual union all
+select 'O'   ot_code, 'Payload owner'                                                                                                                                 ot_meaning, 'Operators'                    ot_group from dual union all
+select 'P'   ot_code, 'Parent organization of another entry'                                                                                                          ot_meaning, 'Operators'                    ot_group from dual union all
+select 'LS'  ot_code, 'Launch site'                                                                                                                                   ot_meaning, 'Launch origin or destination' ot_group from dual union all
+select 'LP'  ot_code, 'Launch position'                                                                                                                               ot_meaning, 'Launch origin or destination' ot_group from dual union all
+select 'LC'  ot_code, 'Launch cruise'                                                                                                                                 ot_meaning, 'Launch origin or destination' ot_group from dual union all
+select 'LZ'  ot_code, 'Launch zone'                                                                                                                                   ot_meaning, 'Launch origin or destination' ot_group from dual union all
+select 'TGT' ot_code, 'Suborbital target area'                                                                                                                        ot_meaning, 'Launch origin or destination' ot_group from dual;
 
 alter table organization_type add constraint pk_organization_type primary key (ot_code);
 
