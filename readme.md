@@ -63,17 +63,22 @@ WORLD
 Full list of instances where GCAT text data is not identically mapped to the relational model of GCATDB:
 	Vague dates, which contain both date and precision, were converted to two separate columns to store the date and precision.
 	Question marks that are used to denote the certainty of data were removed. (TODO - Perhaps I should add a _IS_CERTAIN column?)
-	"sites.tsv"."Site" is stored as SITE.S_CODE. (While "sites.tsv" has an empty "Code" for backwards compatibility, the database prefers name consistency over text file backwards compatibility. (TODO - Change this?)
 	spin.tsv was combind into worlds.tsv to make a single WORLD table.
 	Most number string are converted to numbers. Values that might include infinity, such as the satellite apogee, are stored as BINARY_DOUBLE which supports infinity.
 
-	payload.TLast - "*" is translated to NULL, which means that no information is available.
-	payload.TOp - "*" is translated to NULL, which means the payload is beleived to still be operating
-	payload.TDate - "*" is translated to NULL, which means the payload is believed to still be transmitting
-	Payload Category is converted from a list of values into a separate table - PAYLOAD_CATEGORY
 
-	Payload UNState - The presence of brackets is stored in PAY_IS_REGISTERERD. (The asterisk can be inferred with other columns.)
-
+	Site
+		"Site" is stored as SITE_CODE. (GCATDB does not need to use the name "Site" for backwards compatibility.)
+	Organization
+		"Parent" --> o_parent_o_code
+	Payload
+		TLast: "*" is translated to NULL, which means that no information is available.
+		TOp: "*" is translated to NULL, which means the payload is beleived to still be operating
+		TDate - "*" is translated to NULL, which means the payload is believed to still be transmitting
+		Payload Category is converted from a list of values into a separate table - PAYLOAD_CATEGORY
+		UNState: The presence of brackets is stored in PAY_IS_REGISTERERD. (The asterisk can be inferred with other columns.)
+	Launch
+		Group nested values are separated into the tables LAUNCH_PAYLOAD_ORG and LAUNCH_INVESTIGATOR.
 
 TODO: how to install, etc
 
