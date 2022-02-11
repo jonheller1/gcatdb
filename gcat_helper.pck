@@ -31,12 +31,12 @@ create or replace package gcat_helper authid current_user is
 		'PAYLOAD_CATEGORY',
 		'PAYLOAD_DISCIPLINE',
 		'ENGINE',
-		'STAGE',
-		'LAUNCH_VEHICLE_STAGE',
-		'STAGE_MANUFACTURER',
 		'PROPELLANT',
 		'ENGINE_PROPELLANT',
-		'ENGINE_MANUFACTURER'
+		'ENGINE_MANUFACTURER',
+		'STAGE',
+		'LAUNCH_VEHICLE_STAGE',
+		'STAGE_MANUFACTURER'
 	);
 
 	function file_to_blob (p_dir in varchar2, p_filename in varchar2) return blob;

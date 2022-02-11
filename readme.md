@@ -79,6 +79,8 @@ Full list of instances where GCAT text data is not identically mapped to the rel
 		UNState: The presence of brackets is stored in PAY_IS_REGISTERERD. (The asterisk can be inferred with other columns.)
 	Launch
 		Group nested values are separated into the tables LAUNCH_PAYLOAD_ORG and LAUNCH_INVESTIGATOR.
+	Engine
+		Since there are no decent primary keys, each row is given a unique and meaningless E_ID as the primary key.
 
 TODO: how to install, etc
 

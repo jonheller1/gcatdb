@@ -1874,48 +1874,73 @@ alter table payload_discipline add constraint pk_payload_discipline primary key(
 alter table payload_discipline add constraint fk_payload_discipline_payload foreign key(pd_pay_jcat) references payload(pay_jcat);
 
 
+--ENGINE
+drop table engine purge;
+create table engine nologging as
+select
+	e_ID,
+	cast(e_Name as varchar2(1000)) e_Name,
+	e_Family,
+	e_Alt_Name,
+	gcat_helper.gcat_to_number(e_Mass) e_Mass,
+	e_MFlag,
+	gcat_helper.gcat_to_number(e_Impulse) e_Impulse,
+	e_ImpFlag,
+	gcat_helper.gcat_to_number(e_Thrust) e_Thrust,
+	e_TFlag,
+	gcat_helper.gcat_to_number(e_Isp) e_Isp,
+	e_IspFlag,
+	gcat_helper.gcat_to_number(e_Duration) e_Duration,
+	e_DurFlag,
+	gcat_helper.gcat_to_number(e_Chambers) e_Chambers,
+	gcat_helper.vague_to_date(e_Date) e_Date,
+	gcat_helper.vague_to_precision(e_Date) e_Date_precision,
+	e_Usage,
+	e_Group
+from
+(
+	--Rename columns.
+	select
+		line_number                                       e_ID,
+		gcat_helper.convert_null_and_trim("Name"        ) e_Name,
+		gcat_helper.convert_null_and_trim("Family"      ) e_Family,
+		gcat_helper.convert_null_and_trim("Alt_Name"    ) e_Alt_Name,
+		gcat_helper.convert_null_and_trim("Mass"        ) e_Mass,
+		gcat_helper.convert_null_and_trim("MFlag"       ) e_MFlag,
+		gcat_helper.convert_null_and_trim("Impulse"     ) e_Impulse,
+		gcat_helper.convert_null_and_trim("ImpFlag"     ) e_ImpFlag,
+		gcat_helper.convert_null_and_trim("Thrust"      ) e_Thrust,
+		gcat_helper.convert_null_and_trim("TFlag"       ) e_TFlag,
+		gcat_helper.convert_null_and_trim("Isp"         ) e_Isp,
+		gcat_helper.convert_null_and_trim("IspFlag"     ) e_IspFlag,
+		gcat_helper.convert_null_and_trim("Duration"    ) e_Duration,
+		gcat_helper.convert_null_and_trim("DurFlag"     ) e_DurFlag,
+		gcat_helper.convert_null_and_trim("Chambers"    ) e_Chambers,
+		gcat_helper.convert_null_and_trim("Date"        ) e_Date,
+		gcat_helper.convert_null_and_trim("Usage"       ) e_Usage,
+		gcat_helper.convert_null_and_trim("Group"       ) e_Group
+	from engines_staging
+) rename_columns
+order by 1,2,3;
 
-
-/*
-TODO, in this order
-ENGINE
-STAGE
-LAUNCH_VEHICLE_STAGE
-STAGE_MANUFACTURER
-PROPELLANT
-ENGINE_PROPELLANT
-ENGINE_MANUFACTURER
-*/
-
-
-
-/*
-TODO: Convert to S_MOTOR to E_CODE? Currently the values look very different.
-select distinct s_motor, "Name"
-from satellite
-full outer join engines_staging
-	on s_motor = "Name"
-order by coalesce(s_motor, "Name");
-*/
+alter table engine add constraint pk_engine primary key(e_id);
 
 
 --PROPELLANT:
-create table propellant
-(
-	p_name,
-	constraint pk_propellant primary key (p_name)
-)
-compress as
+drop table propellant purge;
+create table propellant as
 select propellant_name p_name
 from
 (
 	select distinct
 		--Fix: It looks like some of the values got their last letter cut off.
-		replace(replace(replace(replace(column_value,
+		replace(replace(replace(replace(replace(column_value,
 			'Al TP-H-334', 'Al TP-H-3340'),
 			'AlTP-H-3062', 'AlTP-H-3062M'),
 			'RFNA AK-20', 'RFNA AK-20F'),
-			'Vinyl Isobutyl ethe', 'Vinyl Isobutyl ether')
+			'Vinyl Isobutyl ethe', 'Vinyl Isobutyl ether'),
+			--This column is a single value - ignore the slash.
+			'JPX (JP-4/UDMH)', 'JPX (JP-4 and UDMH)')
 		propellant_name
 	from
 	(
@@ -1939,6 +1964,35 @@ from
 	cross join gcat_helper.get_nt_from_list(propellant_list, '/')
 )
 order by p_name;
+
+alter table propellant add constraint pk_propellant primary key(p_name);
+
+
+
+
+
+/*
+TODO, in this order
+ENGINE_PROPELLANT
+ENGINE_MANUFACTURER
+
+
+STAGE
+LAUNCH_VEHICLE_STAGE
+STAGE_MANUFACTURER
+*/
+
+
+
+/*
+TODO: Convert to S_MOTOR to E_CODE? Currently the values look very different.
+select distinct s_motor, "Name"
+from satellite
+full outer join engines_staging
+	on s_motor = "Name"
+order by coalesce(s_motor, "Name");
+*/
+
 
 
 
