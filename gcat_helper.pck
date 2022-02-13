@@ -31,7 +31,6 @@ create or replace package gcat_helper authid current_user is
 		'PAYLOAD_CATEGORY',
 		'PAYLOAD_DISCIPLINE',
 		'ENGINE',
-		'PROPELLANT',
 		'ENGINE_PROPELLANT',
 		'ENGINE_MANUFACTURER',
 		'STAGE',

@@ -1875,7 +1875,6 @@ alter table payload_discipline add constraint fk_payload_discipline_payload fore
 
 
 --ENGINE
-drop table engine purge;
 create table engine nologging as
 select
 	e_ID,
@@ -1927,12 +1926,12 @@ alter table engine add constraint pk_engine primary key(e_id);
 
 
 --PROPELLANT:
-drop table propellant purge;
-create table propellant as
-select propellant_name p_name
+create table engine_propellant compress as
+select ep_e_id, ep_propellant, ep_fuel_or_oxidizer
 from
 (
-	select distinct
+	select
+		ep_e_id,
 		--Fix: It looks like some of the values got their last letter cut off.
 		replace(replace(replace(replace(replace(column_value,
 			'Al TP-H-334', 'Al TP-H-3340'),
@@ -1941,39 +1940,43 @@ from
 			'Vinyl Isobutyl ethe', 'Vinyl Isobutyl ether'),
 			--This column is a single value - ignore the slash.
 			'JPX (JP-4/UDMH)', 'JPX (JP-4 and UDMH)')
-		propellant_name
+		ep_propellant,
+		ep_fuel_or_oxidizer
 	from
 	(
 		--All chemicals
 		--
 		--Oxidizers.
-		select replace("Oxidizer", '?') propellant_list
+		select line_number ep_e_id, replace("Oxidizer", '?') propellant_list, 'oxidizer' ep_fuel_or_oxidizer
 		from engines_staging
 		where "Oxidizer" <> '-'
 		union
 		--Fuels.
 		--(Fix: one weird fuel that looks like there's a missing second value)
-		select case when propellant_list = 'MMH/' then 'MMH' else propellant_list end
+		select line_number ep_e_id, case when propellant_list = 'MMH/' then 'MMH' else propellant_list end, ep_fuel_or_oxidizer
 		from
 		(
-			select replace("Fuel", '?') propellant_list
+			select line_number, replace("Fuel", '?') propellant_list, 'fuel' ep_fuel_or_oxidizer
 			from engines_staging
 			where "Fuel" <> '-'
 		)
 	)
 	cross join gcat_helper.get_nt_from_list(propellant_list, '/')
 )
-order by p_name;
+order by ep_propellant;
 
-alter table propellant add constraint pk_propellant primary key(p_name);
+alter table engine_propellant add constraint pk_engine_propellant primary key(ep_e_id, ep_propellant, ep_fuel_or_oxidizer);
+alter table engine_propellant add constraint fk_engine_propellant_engine foreign key (ep_e_id) references engine(e_id);
 
 
+
+create table engine_propellent
+select line_number e_id, "Manufacturer" from engines_staging;
 
 
 
 /*
 TODO, in this order
-ENGINE_PROPELLANT
 ENGINE_MANUFACTURER
 
 

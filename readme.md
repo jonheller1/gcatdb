@@ -26,6 +26,7 @@ SATELLITE
 
 PAYLOAD
 	PAYLOAD_CATEGORY
+	PAYLOAD_DISCIPLINE
 
 ORGANIZATION
 	ORGANIZATION_ORG_TYPE
@@ -46,8 +47,6 @@ LAUNCH_VEHICLE
 
 STAGE
 	STAGE_MANUFACTURER
-
-PROPELLANT
 
 ENGINE
 	ENGINE_MANUFACTURER
@@ -81,6 +80,7 @@ Full list of instances where GCAT text data is not identically mapped to the rel
 		Group nested values are separated into the tables LAUNCH_PAYLOAD_ORG and LAUNCH_INVESTIGATOR.
 	Engine
 		Since there are no decent primary keys, each row is given a unique and meaningless E_ID as the primary key.
+		Oxidizer and Fuel are listed in the table ENGINE_PROPELLANT.
 
 TODO: how to install, etc
 
