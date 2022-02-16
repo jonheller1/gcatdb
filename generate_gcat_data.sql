@@ -59,11 +59,11 @@ select 'lprcat.tsv'    file_name, 'LPRCAT_STAGING'    staging_table_name,    10 
 select 'psatcat.tsv'   file_name, 'PSATCAT_STAGING'   staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/psatcat.tsv'      url, '#JCAT	Piece	Name	LDate	TLast	TOp	TDate	TF	Program	Plane	Att	Mvr	Class	Category	UNState	UNReg	UNPeriod	UNPerigee	UNApogee	UNInc	Result	Control	Discipline	Comment' from dual union all
 select 'pauxcat.tsv'   file_name, 'PAUXCAT_STAGING'   staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/pauxcat.tsv'      url, '#JCAT	Piece	Name	LDate	TLast	TOp	TDate	TF	Program	Plane	Att	Mvr	Class	Category	UNState	UNReg	UNPeriod	UNPerigee	UNApogee	UNInc	Result	Control	Discipline	Comment' from dual union all
 select 'pftocat.tsv'   file_name, 'PFTOCAT_STAGING'   staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/pftocat.tsv'      url, '#JCAT	Piece	Name	LDate	TLast	TOp	TDate	TF	Program	Plane	Att	Mvr	Class	Category	UNState	UNReg	UNPeriod	UNPerigee	UNApogee	UNInc	Result	Control	Discipline	Comment' from dual union all
-select 'plcat.tsv'     file_name, 'PLCAT_STAGING'     staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/plcat.tsv'        url, '#JCAT	Piece	Name	LDate	TLast	TOp	TDate	TF	Program	Plane	Att	Mvr	Class	Category	UNState	UNReg	UNPeriod	UNPerigee	UNApogee	UNInc	Result	Control	Discipline	Comment' from dual
+select 'plcat.tsv'     file_name, 'PLCAT_STAGING'     staging_table_name,    10 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/plcat.tsv'        url, '#JCAT	Piece	Name	LDate	TLast	TOp	TDate	TF	Program	Plane	Att	Mvr	Class	Category	UNState	UNReg	UNPeriod	UNPerigee	UNApogee	UNInc	Result	Control	Discipline	Comment' from dual union all
+select 'usatcat.tsv'   file_name, 'USATCAT_STAGING'   staging_table_name,  6070 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/cat/usatcat.tsv'      url, '#JCAT	Name' from dual union all
+select 'stages.tsv'    file_name, 'STAGES_STAGING'    staging_table_name,  1430 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/stages.tsv'    url, '#Stage_Name	Stage_Family	Stage_Manufacturer	Stage_Alt_Name	Length	Diameter	Launch_Mass	Dry_Mass	Thrust	Duration	Engine	NEng' from dual union all
+select 'lvs.tsv'       file_name, 'LVS_STAGING'       staging_table_name,  4350 min_expected_rows, 'https://planet4589.org/space/gcat/tsv/tables/lvs.tsv'       url, '#LV_Name	LV_Variant	Stage_No	Stage_Name	Qualifier	Dummy	Multiplicity	Stage_Impulse	Stage_Apogee	Stage_Perigee	Perigee_Qual' from dual
 order by file_name;
-
-
-
 
 
 
@@ -312,7 +312,7 @@ begin
 		from gcat_config_vw
 		--TEMP for TESTING - only use one file.
 		--where file_name = 'satcat.tsv'
-		--where file_name like '%lp.tsv%'
+		where file_name like '%usatcat.tsv%'
 		order by file_name
 	) loop
 		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 1, argument_value => '--output');
@@ -1875,7 +1875,7 @@ alter table payload_discipline add constraint fk_payload_discipline_payload fore
 
 
 --ENGINE
-create table engine nologging as
+create table engine compress nologging as
 select
 	e_ID,
 	cast(e_Name as varchar2(1000)) e_Name,
@@ -1925,7 +1925,7 @@ order by 1,2,3;
 alter table engine add constraint pk_engine primary key(e_id);
 
 
---PROPELLANT:
+--ENGINE_PROPELLANT:
 create table engine_propellant compress as
 select ep_e_id, ep_propellant, ep_fuel_or_oxidizer
 from
@@ -1969,22 +1969,196 @@ alter table engine_propellant add constraint pk_engine_propellant primary key(ep
 alter table engine_propellant add constraint fk_engine_propellant_engine foreign key (ep_e_id) references engine(e_id);
 
 
+--ENGINE_MANUFACTURER:
+drop table engine_manufacturer purge;
+create table engine_manufacturer compress as
+select em_e_id, em_manufacturer_o_code
+from
+(
+	select
+		em_e_id,
+		replace(replace(replace(replace(
+			column_value, '?'),
+			'Zulfiqar', 'IRGC'),
+			'TKSVA', 'OKB52'),
+			'IRCPS', 'NGISP'
+		) em_manufacturer_o_code
+	from
+	(
+		select line_number em_e_id, "Manufacturer"
+		from engines_staging
+	)
+	cross join gcat_helper.get_nt_from_list("Manufacturer", '/')
+)
+order by 1,2;
 
-create table engine_propellent
-select line_number e_id, "Manufacturer" from engines_staging;
+alter table engine_manufacturer add constraint pk_engine_manufacturer primary key(em_e_id, em_manufacturer_o_code);
+alter table engine_manufacturer add constraint fk_engine_manufacturer_engine foreign key (em_e_id) references engine(e_id);
+alter table engine_manufacturer add constraint fk_engine_manufacturer_organization foreign key (em_manufacturer_o_code) references organization(o_code);
 
+/*
+--Check for bad organization codes.
+select *
+from engine_manufacturer
+left join organization
+	on em_manufacturer_o_code = o_code
+where o_code is null
+order by 1;
+*/
+
+
+--STAGE
+drop table stage purge;
+create table stage compress nologging as
+select
+	Stage_Name,
+	Stage_LVF_Family,
+	Stage_Alt_Name,
+	gcat_helper.gcat_to_number(Stage_Length) stage_length,
+	gcat_helper.gcat_to_number(Stage_Diameter) stage_diameter,
+	gcat_helper.gcat_to_number(Stage_Launch_Mass) stage_launch_mass,
+	gcat_helper.gcat_to_number(Stage_Dry_Mass) stage_dry_mass,
+	gcat_helper.gcat_to_number(Stage_Thrust) stage_thrust,
+	gcat_helper.gcat_to_number(Stage_Duration) stage_duration,
+	stage_e_id,
+	Stage_NEng
+from
+(
+	--Rename columns.
+	select
+		gcat_helper.convert_null_and_trim("Stage_Name"    ) Stage_Name,
+		gcat_helper.convert_null_and_trim("Stage_Family"  ) Stage_LVF_Family,
+		gcat_helper.convert_null_and_trim("Stage_Alt_Name") Stage_Alt_Name,
+		gcat_helper.convert_null_and_trim("Length"        ) Stage_Length,
+		gcat_helper.convert_null_and_trim("Diameter"      ) Stage_Diameter,
+		gcat_helper.convert_null_and_trim("Launch_Mass"   ) Stage_Launch_Mass,
+		gcat_helper.convert_null_and_trim("Dry_Mass"      ) Stage_Dry_Mass,
+		gcat_helper.convert_null_and_trim("Thrust"        ) Stage_Thrust,
+		gcat_helper.convert_null_and_trim("Duration"      ) Stage_Duration,
+		e_id stage_e_id,
+		gcat_helper.convert_null_and_trim("NEng"          ) Stage_NEng
+	from stages_staging
+	left join engine
+		on stages_staging."Engine" = engine.e_name
+	--Manually adjust some joins, based on names.
+	--When it's still ambiguous, choose the engine with either more complete values, or more precise-looking numbers, or later values.
+	where not
+	(
+		("Stage_Name" = '11S86'           and e_usage = 'Blok DM') or
+		("Stage_Name" = '11S861'          and e_usage = 'Blok D-1') or
+		("Stage_Name" = '11S861-01'       and e_usage = 'Blok D-1') or
+		("Stage_Name" = '11S861-03'       and e_usage = 'Blok D-1') or
+		("Stage_Name" = '17S40'           and e_usage = 'Blok DM') or
+		("Stage_Name" = '14S48'           and e_usage = 'Blok DM') or
+		("Stage_Name" = 'Blok DM1'        and e_usage = 'Blok D-1') or
+		("Stage_Name" = 'Blok DM3'        and e_usage = 'Blok D-1') or
+		("Stage_Name" = 'Blok DM4'        and e_usage = 'Blok D-1') or
+		("Stage_Name" = 'Blok DM-SL'      and e_usage = 'Blok D-1') or
+		("Stage_Name" = 'Blok DM-SLB'     and e_usage = 'Blok D-1') or
+		("Stage_Name" = 'Dragon V2'       and e_usage = 'Dragon') or
+		("Stage_Name" = 'FB-1 Stage 2'    and e_usage = 'CZ-2 St2 vernier x4') or
+		("Stage_Name" = 'CZ-4 Stage 3'    and e_usage = 'CZ-4B (3)') or
+		("Stage_Name" = 'CZ-4B Stage 3'   and e_usage = 'CZ-4B (3)') or
+		("Stage_Name" = 'RT-23 St 3'      and e_usage is null) or
+		("Stage_Name" = 'M-34'            and e_usage = 'M-V [3]') or
+		("Stage_Name" = 'GEM-60'          and e_date = date '2002-11-20') or
+		("Stage_Name" = 'Star 48B'        and e_usage = 'STS PAM-D') or
+		("Stage_Name" = 'Star 48B AKM'    and e_usage = 'STS PAM-D') or
+		("Stage_Name" = 'H-II SSB'        and e_date is null) or
+		("Stage_Name" = 'Taurion'         and e_date is null) or
+		("Stage_Name" = 'Improved Orion'  and e_date is null) or
+		("Stage_Name" = 'Hydac'           and e_alt_name = 'H-28') or
+		("Stage_Name" = 'SDC Viper'       and e_alt_name is null) or
+		("Stage_Name" = 'Arcas'           and e_date is null) or
+		("Stage_Name" = 'Frangible Arcas' and e_impulse is null) or
+		("Stage_Name" = 'X-15'            and e_alt_name is null)
+	)
+	--Exclude a row with no name.
+	and "Stage_Name" <> '-'
+) rename_columns
+order by 1,2,3;
+
+--If the PK doesn't build there may be more duplicate Engine names. See the weird join above.
+alter table stage add constraint pk_stage primary key(stage_name);
+alter table stage add constraint fk_stage_launch_vehicle_family foreign key (stage_lvf_family) references launch_vehicle_family(lvf_family);
+alter table stage add constraint fk_stage_engine foreign key (stage_e_id) references engine(e_id);
+
+
+
+
+select * from lvs_staging;
+
+;
+
+select * From site;
+select * From satellite;
+
+
+/*
+
+#JCAT	Name
+
+#LV_Name	LV_Variant	Stage_No	Stage_Name	Qualifier	Dummy	Multiplicity	Stage_Impulse	Stage_Apogee	Stage_Perigee	Perigee_Qual
+
+;
+
+select * from lvs_staging;
 
 
 /*
 TODO, in this order
-ENGINE_MANUFACTURER
-
 
 STAGE
 LAUNCH_VEHICLE_STAGE
 STAGE_MANUFACTURER
+
+
+
 */
 
+
+
+
+
+
+
+--Are any usatcats in payloads?
+
+select *
+from usatcat_staging
+join payload
+	on usatcat_staging.jcat = payload.pay_jcat
+order by usatcat_staging.jcat;
+;
+
+select * from payload;
+
+
+select * from satellite order by substr(s_jcat, 2);
+
+select * from usatcat_staging where "JCAT" in ('A0001', 'S0001');
+select * from usatcat_staging order by "JCAT";
+
+select JCAT, count(*) from usatcat_staging group by jcat having count(*) >= 2;
+
+
+select *
+from usatcat_staging
+left join satellite
+	on usatcat_staging."JCAT" = satellite.s_jcat
+where satellite.s_jcat is null;
+
+
+select count(*)
+from satellite
+left join usatcat_staging
+	on usatcat_staging."JCAT" = satellite.s_jcat
+where usatcat_staging."JCAT" is null;
+
+
+
+
+--TODO: USATCAT
 
 
 /*
