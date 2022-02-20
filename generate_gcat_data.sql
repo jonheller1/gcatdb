@@ -2070,8 +2070,7 @@ from
 		("Stage_Name" = 'Hydac'           and e_alt_name = 'H-28') or
 		("Stage_Name" = 'SDC Viper'       and e_alt_name is null) or
 		("Stage_Name" = 'Arcas'           and e_date is null) or
-		("Stage_Name" = 'Frangible Arcas' and e_impulse is null) or
-		("Stage_Name" = 'X-15'            and e_alt_name is null)
+		("Stage_Name" = 'Frangible Arcas' and e_impulse is null)
 	)
 	--Exclude a row with no name.
 	and "Stage_Name" <> '-'
@@ -2084,81 +2083,130 @@ alter table stage add constraint fk_stage_launch_vehicle_family foreign key (sta
 alter table stage add constraint fk_stage_engine foreign key (stage_e_id) references engine(e_id);
 
 
+--STAGE_MANUFACTURER
+create table stage_manufacturer compress as
+select cast(sm_stage_name as varchar2(1000)) sm_stage_name, sm_manufacturer_o_code
+from
+(
+	select
+		sm_stage_name, replace(column_value, '?') sm_manufacturer_o_code
+	from
+	(
+		select
+			"Stage_Name" sm_stage_name,
+			replace("Stage_Manufacturer", 'NCSIST', '') "Stage_Manufacturer" --TODO: Missing data from orgs.tsv?
+		from stages_staging
+		where "Stage_Name" not in ('-', '?')
+			and "Stage_Manufacturer" <> '-'
+	)
+	cross join gcat_helper.get_nt_from_list("Stage_Manufacturer", '/')
+)
+order by 1,2;
 
-
-select * from lvs_staging;
-
-;
-
-select * From site;
-select * From satellite;
-
+alter table stage_manufacturer add constraint pk_stage_manufacturer primary key(sm_stage_name, sm_manufacturer_o_code);
+alter table stage_manufacturer add constraint fk_stage_manufacturer_stage foreign key (sm_stage_name) references stage(stage_name);
+alter table stage_manufacturer add constraint fk_stage_manufacturer_org foreign key (sm_manufacturer_o_code) references organization(o_code);
 
 /*
+--FK_STAGE_MANUFACTURER_STAGE errors:
+select *
+from stage_manufacturer
+left join stage
+	on sm_stage_name = stage_name
+where stage_name is null;
 
-#JCAT	Name
-
-#LV_Name	LV_Variant	Stage_No	Stage_Name	Qualifier	Dummy	Multiplicity	Stage_Impulse	Stage_Apogee	Stage_Perigee	Perigee_Qual
-
-;
-
-select * from lvs_staging;
-
-
-/*
-TODO, in this order
-
-STAGE
-LAUNCH_VEHICLE_STAGE
-STAGE_MANUFACTURER
-
-
+--FK_STAGE_MANUFACTURER_ORG errors:
+select *
+from stage_manufacturer
+left join organization
+	on sm_manufacturer_o_code = o_code
+where o_code is null;
 
 */
 
 
+--LAUNCH_VEHICLE_STAGE
+create table launch_vehicle_stage nologging as
+select /*+ no_gather_optimizer_statistics */
+	cast(lvs_LV_Name as varchar2(100)) lvs_lv_name,
+	cast(lvs_LV_Variant as varchar2(100)) lvs_lv_variant,
+	cast(lvs_Stage_No as varchar2(100)) lvs_stage_no,
+	cast(lvs_Stage_Name as varchar2(100)) lvs_Stage_Name,
+	lvs_stage_type,
+	lvs_Qualifier,
+	lvs_Dummy,
+	gcat_helper.gcat_to_number(lvs_Multiplicity) lvs_Multiplicity,
+	gcat_helper.gcat_to_number(lvs_Stage_Impulse) lvs_Stage_Impulse,
+	gcat_helper.gcat_to_number(lvs_Stage_Apogee) lvs_Stage_Apogee,
+	gcat_helper.gcat_to_number(lvs_Stage_Perigee) lvs_Stage_Perigee,
+	lvs_Perigee_Qual
+from
+(
+	--Fix data issues.
+	select
+		lvs_LV_Name,
+		lvs_LV_Variant,
+		lvs_Stage_No,
+		case
+			when stage_name is null then null
+			else lvs_stage_name
+		end lvs_stage_name,
+		case
+			when stage_name is null then lvs_stage_name
+			else null
+		end lvs_stage_type,
+		lvs_Qualifier,
+		lvs_Dummy,
+		lvs_Multiplicity,
+		lvs_Stage_Impulse,
+		lvs_Stage_Apogee,
+		lvs_Stage_Perigee,
+		lvs_Perigee_Qual
+	from
+	(
+		--Rename columns.
+		select
+			gcat_helper.convert_null_and_trim("LV_Name"      ) lvs_LV_Name,
+			gcat_helper.convert_null_and_trim("LV_Variant"   ) lvs_LV_Variant,
+			gcat_helper.convert_null_and_trim("Stage_No"     ) lvs_Stage_No,
+			gcat_helper.convert_null_and_trim("Stage_Name"   ) lvs_Stage_Name,
+			gcat_helper.convert_null_and_trim("Qualifier"    ) lvs_Qualifier,
+			gcat_helper.convert_null_and_trim("Dummy"        ) lvs_Dummy,
+			gcat_helper.convert_null_and_trim("Multiplicity" ) lvs_Multiplicity,
+			gcat_helper.convert_null_and_trim("Stage_Impulse") lvs_Stage_Impulse,
+			gcat_helper.convert_null_and_trim("Stage_Apogee" ) lvs_Stage_Apogee,
+			gcat_helper.convert_null_and_trim("Stage_Perigee") lvs_Stage_Perigee,
+			gcat_helper.convert_null_and_trim("Perigee_Qual" ) lvs_Perigee_Qual
+		from lvs_staging
+	) rename_columns
+	--FIX: There are many "Stage_Name" values that do not match STAGE.STAGE_NAME, and they are more like Stage Types.
+	left join stage
+		on rename_columns.lvs_stage_name = stage_name
+	--where not (lvs_lv_name in ('?', 'Unknown') and lvs_stage_name = '?' and lvs_stage_name = '?'
+) fix_data
+order by 1,2,3;
 
+alter table launch_vehicle_stage add constraint uq_launch_vehicle_stage unique(lvs_lv_name, lvs_lv_variant, lvs_stage_no, lvs_stage_name, lvs_stage_type);
+alter table launch_vehicle_stage add constraint fk_launch_vehicle_stage_launch_vehicle foreign key(lvs_lv_name, lvs_lv_variant) references launch_vehicle(lv_name, lv_variant);
+alter table launch_vehicle_stage add constraint fk_launch_vehicle_stage_stage foreign key(lvs_stage_name) references stage(stage_name);
 
-
-
-
---Are any usatcats in payloads?
-
+/*
+--FK_LAUNCH_VEHICLE_STAGE_STAGE - Check for bad values.
 select *
-from usatcat_staging
-join payload
-	on usatcat_staging.jcat = payload.pay_jcat
-order by usatcat_staging.jcat;
-;
-
-select * from payload;
-
-
-select * from satellite order by substr(s_jcat, 2);
-
-select * from usatcat_staging where "JCAT" in ('A0001', 'S0001');
-select * from usatcat_staging order by "JCAT";
-
-select JCAT, count(*) from usatcat_staging group by jcat having count(*) >= 2;
-
-
-select *
-from usatcat_staging
-left join satellite
-	on usatcat_staging."JCAT" = satellite.s_jcat
-where satellite.s_jcat is null;
-
-
-select count(*)
-from satellite
-left join usatcat_staging
-	on usatcat_staging."JCAT" = satellite.s_jcat
-where usatcat_staging."JCAT" is null;
+from launch_vehicle_stage
+left join stage
+	on lvs_stage_name = stage_name
+where lvs_stage_name is not null
+	and stage_name is null
+*/
 
 
 
+/*
 
 --TODO: USATCAT
+
+#JCAT	Name
 
 
 /*
