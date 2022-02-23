@@ -80,6 +80,12 @@ Full list of instances where GCAT text data is not identically mapped to the rel
 	Engine
 		Since there are no decent primary keys, each row is given a unique and meaningless E_ID as the primary key.
 		Oxidizer and Fuel are listed in the table ENGINE_PROPELLANT.
+	Launch Vehicle Stage
+		The "Stage Name" is split into LVS_STAGE_NAME (values that actually join to STAGE.STAGE_NAME) and LVS_STAGE_TYPE (generic-named values that do not match any values in STAGE.)
+	ustacat
+		Instead of a separate table, the satellite Unicode name is stored in SATELLITE.S_UNICODE_NAME.
+
+
 
 TODO: how to install, etc
 

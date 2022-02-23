@@ -549,7 +549,6 @@ select 'TGT' ot_type, 'Suborbital target area'                                  
 alter table organization_type add constraint pk_organization_type primary key (ot_type);
 
 
-drop table organization purge;
 --ORGANIZATION:
 create table organization compress as
 select o_code, o_ucode, o_statecode, o_class,
@@ -1595,7 +1594,7 @@ from
 		--Rename columns.
 		select
 			s_catalog,
-			gcat_helper.convert_null_and_trim("JCAT"              ) s_jcat,
+			gcat_helper.convert_null_and_trim(sat_files."JCAT"    ) s_jcat,
 			gcat_helper.convert_null_and_trim("Satcat"            ) s_satcat,
 			gcat_helper.convert_null_and_trim("Piece"             ) s_piece,
 			gcat_helper.convert_null_and_trim(substr("Type", 1, 1)) s_type_byte_1,
@@ -1607,7 +1606,7 @@ from
 			gcat_helper.convert_null_and_trim(substr("Type", 7, 1)) s_type_byte_7,
 			gcat_helper.convert_null_and_trim(substr("Type", 8, 1)) s_type_byte_8,
 			gcat_helper.convert_null_and_trim(substr("Type", 9, 1)) s_type_byte_9,
-			gcat_helper.convert_null_and_trim("Name"              ) s_name,
+			gcat_helper.convert_null_and_trim(sat_files."Name"    ) s_name,
 			gcat_helper.convert_null_and_trim("PLName"            ) s_PLName,
 			gcat_helper.convert_null_and_trim("LDate"             ) s_LDate,
 			gcat_helper.convert_null_and_trim("Parent"            ) s_parent,
@@ -1641,7 +1640,8 @@ from
 			gcat_helper.convert_null_and_trim("IF"                ) s_IF,
 			gcat_helper.convert_null_and_trim("OpOrbit"           ) s_OpOrbit,
 			gcat_helper.convert_null_and_trim("OQUAL"             ) s_OQUAL,
-			gcat_helper.convert_null_and_trim("AltNames"          ) s_AltNames
+			gcat_helper.convert_null_and_trim("AltNames"          ) s_AltNames,
+			usatcat_staging."Name"                                  s_unicode_name
 		from
 		(
 			select 'auxcat'  s_catalog, auxcat_staging.*  from auxcat_staging  union all
@@ -1655,7 +1655,9 @@ from
 			select 'rcat'    s_catalog, rcat_staging.*    from rcat_staging    union all
 			select 'satcat'  s_catalog, satcat_staging.*  from satcat_staging  union all
 			select 'tmpcat'  s_catalog, tmpcat_staging.*  from tmpcat_staging
-		)
+		) sat_files
+		left join usatcat_staging
+			on sat_files.JCAT = usatcat_staging.JCAT
 	) rename_columns
 ) fix_data
 order by 1,2,3;
@@ -1970,7 +1972,6 @@ alter table engine_propellant add constraint fk_engine_propellant_engine foreign
 
 
 --ENGINE_MANUFACTURER:
-drop table engine_manufacturer purge;
 create table engine_manufacturer compress as
 select em_e_id, em_manufacturer_o_code
 from
@@ -2008,7 +2009,6 @@ order by 1;
 
 
 --STAGE
-drop table stage purge;
 create table stage compress nologging as
 select
 	Stage_Name,
@@ -2203,15 +2203,8 @@ where lvs_stage_name is not null
 
 
 /*
-
---TODO: USATCAT
-
-#JCAT	Name
-
-
-/*
-TODO: Convert to S_MOTOR to E_CODE? Currently the values look very different.
-select distinct s_motor, "Name"
+--TODO: Convert to S_MOTOR to E_CODE? Currently the values look very different.
+select distinct s_motor, engines_staging."Name"  engine_name
 from satellite
 full outer join engines_staging
 	on s_motor = "Name"
@@ -2223,28 +2216,9 @@ order by coalesce(s_motor, "Name");
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 --------------------------------------------------------------------------------
--- Shrink columns.
+-- Shrink columns. (8 seconds.)
 --------------------------------------------------------------------------------
-
 
 --Automatically shrink column size as much as possible.
 --(This doesn't save space, but can help with applications that use the max data size for presentation.)
@@ -2315,7 +2289,7 @@ end;
 /
 
 
---Create user to contain the data.
+--Create user that will only hold the data.
 begin
 	dbms_utility.exec_ddl_statement@gcat('create user gcat no authentication quota unlimited on data default tablespace data');
 end;
@@ -2458,6 +2432,7 @@ end;
 
 --------------------------------------------------------------------------------
 -- Copy tables to the cloud.
+-- TODO: Can I do this with datapump?
 --------------------------------------------------------------------------------
 
 declare
@@ -2569,3 +2544,87 @@ begin
 end;
 /
 
+
+
+
+
+--------------------------------------------------------------------------------
+-- Create export data pump.
+--------------------------------------------------------------------------------
+
+--Based on: https://oracle-base.com/articles/misc/data-pump-api#table-export
+declare
+  l_dp_handle       number;
+  v_date_string varchar2(100) := to_char(sysdate, 'YYYYMMDDHH24MISS');
+
+	function get_table_expression return varchar2 is
+		v_table_expression varchar2(32767) := 'in (';
+	begin
+		--Create an IN list of all table names.
+		for i in 1 .. gcat_helper.c_ordered_objects.count loop
+			v_table_expression := v_table_expression || '''' || gcat_helper.c_ordered_objects(i) || ''',';
+		end loop;
+
+		--Remove the last comma, add a closing parenthesis.
+		v_table_expression := substr(v_table_expression, 1, length(v_table_expression) - 1);
+		v_table_expression := v_table_expression || ')';
+
+		--DEBUG:
+		--dbms_output.put_line(v_table_expression);
+
+		return v_table_expression;
+	end;
+
+begin
+  -- Open a table export job.
+  l_dp_handle := dbms_datapump.open(
+    operation   => 'EXPORT',
+    job_mode    => 'TABLE',
+    remote_link => NULL,
+    job_name    => 'GCAT_EXPORT_'||v_date_string,
+    version     => 'LATEST');
+
+  -- Specify the dump file name and directory object name.
+  dbms_datapump.add_file(
+    handle    => l_dp_handle,
+    filename  => 'GCAT_'||v_date_string||'.dmp',
+    directory => 'DATA_PUMP_DIR');
+
+  -- Specify the log file name and directory object name.
+  dbms_datapump.add_file(
+    handle    => l_dp_handle,
+    filename  => 'GCAT_'||v_date_string||'.log',
+    directory => 'DATA_PUMP_DIR',
+    filetype  => DBMS_DATAPUMP.KU$_FILE_TYPE_LOG_FILE);
+
+  -- Specify the table to be exported, filtering the schema and table.
+  dbms_datapump.metadata_filter(
+    handle => l_dp_handle,
+    name   => 'SCHEMA_EXPR',
+    value  => '= ''JHELLER''');
+
+  dbms_datapump.metadata_filter(
+    handle => l_dp_handle,
+    name   => 'NAME_EXPR',
+	value  => get_table_expression());
+    --value  => 'in (''LAUNCH'', ''SATELLITE'')');
+
+  dbms_datapump.set_parameter(
+    handle => l_dp_handle,
+    name   => 'COMPRESSION'	,
+    value  => 'ALL');
+
+  dbms_datapump.start_job(l_dp_handle);
+
+  dbms_datapump.detach(l_dp_handle);
+end;
+/
+
+--Monitor the job:
+select *
+from   dba_datapump_jobs
+where job_name like 'GCAT%'
+order by 1, 2;
+
+
+--Manually copy the file to OCI storage.
