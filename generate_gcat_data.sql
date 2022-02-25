@@ -2427,135 +2427,18 @@ end;
 --(Initial schema will be empty.)
 --https://pa6nsglmabwahpe-gcat.adb.us-ashburn-1.oraclecloudapps.com/ords/GCAT_PUBLIC/_sdw/?nav=worksheet
 
-;
-
-
---------------------------------------------------------------------------------
--- Copy tables to the cloud.
--- TODO: Can I do this with datapump?
---------------------------------------------------------------------------------
-
-declare
-	v_table_name varchar2(128);
-	v_count number;
-	v_sql clob;
-
-	procedure drop_remote_gcat_tables_if_exists is
-		v_tables_does_not_exist exception;
-		pragma exception_init(v_tables_does_not_exist, -942);
-	begin
-		for i in reverse 1 .. gcat_helper.c_ordered_objects.count loop
-			begin
-				dbms_utility.exec_ddl_statement@gcat('drop table gcat.' || gcat_helper.c_ordered_objects(i) || ' purge');
-			exception when v_tables_does_not_exist then
-				null;
-			end;
-		end loop;
-	end drop_remote_gcat_tables_if_exists;
-
-	procedure create_remote_gcat_tables is
-	begin
-		dbms_metadata.set_transform_param (dbms_metadata.session_transform, 'SEGMENT_ATTRIBUTES', false);
-		--Why doesn't this work? This would be much better than the "REPLACE" option.
-		--dbms_metadata.set_transform_param (dbms_metadata.session_transform, 'REMAP_SCHEMA', 'JHELLER', 'GCAT');
-
-		for i in 1 .. gcat_helper.c_ordered_objects.count loop
-			v_table_name := gcat_helper.c_ordered_objects(i);
-
-			--Check if table exists locally.
-			select count(*) into v_count from user_tables where table_name = v_table_name;
-
-			--If table exists, create it remotely and populate it.
-			if v_count = 1 then
-				select replace(dbms_metadata.get_ddl('TABLE', v_table_name) ,'"'||user||'"', '"GCAT"')
-				into v_sql
-				from dual;
-
-				begin
-					dbms_utility.exec_ddl_statement@gcat(v_sql);
-				exception when others then
-					raise_application_error(-20000, 'Error with this SQL: ' || v_sql || chr(10) || sqlerrm);
-				end;
-			end if;
-		end loop;
-	end create_remote_gcat_tables;
-
-	procedure populate_remote_gcat_tables is
-	begin
-		for i in 1 .. gcat_helper.c_ordered_objects.count loop
-			v_table_name := gcat_helper.c_ordered_objects(i);
-
-			--Check if table exists locally.
-			select count(*) into v_count from user_tables where table_name = v_table_name;
-
-			--If table exists, create it remotely and populate it.
-			if v_count = 1 then
-				begin
-					v_sql :=
-					'
-						insert into gcat.'||v_table_name||'@gcat
-						select * from '||v_table_name
-					;
-
-					execute immediate v_sql;
-				exception when others then
-					raise_application_error(-20000, 'Error with this SQL: ' || v_sql || chr(10) || sqlerrm);
-				end;
-			end if;
-		end loop;
-	end populate_remote_gcat_tables;
-
-	procedure create_public_synonyms_and_grants is
-	begin
-		dbms_utility.exec_ddl_statement@gcat(
-		q'[
-			create or replace procedure create_public_synonyms_and_grants as
-			begin
-				for tables in
-				(
-					select
-						'create or replace public synonym ' || object_name || ' for ' || owner || '.' || object_name v_synonym_sql,
-						'grant select on '||owner||'.'||object_name||' to GCAT_PUBLIC' v_grant_sql
-					from all_objects
-					where owner = 'GCAT'
-						and object_type not in ('INDEX')
-					order by object_name
-				) loop
-					execute immediate tables.v_synonym_sql;
-					execute immediate tables.v_grant_sql;
-				end loop;
-			end;
-		]');
-
-		execute immediate 'begin create_public_synonyms_and_grants@gcat; end;';
-
-		dbms_utility.exec_ddl_statement@gcat(
-		q'[
-			drop procedure create_public_synonyms_and_grants
-		]');
-	end create_public_synonyms_and_grants;
-
-begin
-	drop_remote_gcat_tables_if_exists;
-	create_remote_gcat_tables;
-	populate_remote_gcat_tables;
-	commit;
-	create_public_synonyms_and_grants;
-end;
-/
-
-
 
 
 
 --------------------------------------------------------------------------------
--- Create export data pump.
+-- Create export data pump. Takes about 1 minute to generate a 10MB file.
 --------------------------------------------------------------------------------
 
 --Based on: https://oracle-base.com/articles/misc/data-pump-api#table-export
 declare
-  l_dp_handle       number;
-  v_date_string varchar2(100) := to_char(sysdate, 'YYYYMMDDHH24MISS');
+  l_dp_handle    number;
+  v_date_string  varchar2(100) := to_char(sysdate, 'YYYYMMDDHH24MISS');
+  v_job_status   varchar2(128);
 
 	function get_table_expression return varchar2 is
 		v_table_expression varchar2(32767) := 'in (';
@@ -2593,7 +2476,7 @@ begin
   -- Specify the log file name and directory object name.
   dbms_datapump.add_file(
     handle    => l_dp_handle,
-    filename  => 'GCAT_'||v_date_string||'.log',
+    filename  => 'GCAT_EXPORT_'||v_date_string||'.log',
     directory => 'DATA_PUMP_DIR',
     filetype  => DBMS_DATAPUMP.KU$_FILE_TYPE_LOG_FILE);
 
@@ -2616,15 +2499,165 @@ begin
 
   dbms_datapump.start_job(l_dp_handle);
 
+  dbms_datapump.wait_for_job(
+    handle    => l_dp_handle,
+    job_state => v_job_status);
+
+  dbms_output.put_line ('DataPump Export - '||to_char(sysdate,'DD/MM/YYYY HH24:MI:SS')||' Status '||v_job_status);
+
   dbms_datapump.detach(l_dp_handle);
 end;
 /
 
+/*
 --Monitor the job:
 select *
 from   dba_datapump_jobs
 where job_name like 'GCAT%'
 order by 1, 2;
+*/
 
 
---Manually copy the file to OCI storage.
+-- Manually copy the file to OCI storage: GCAT_YYYYMMDDHH24MISS.DMP
+-- Click on the "..." by the uploaded file, click "Create Pre-Authenticated Request",
+--  use defaults and click "Create Pre-Authenticated Request" button, copy URL into below statement.
+
+
+--Drop the old tables. Takes 15 seconds.
+declare
+	v_tables_does_not_exist exception;
+	pragma exception_init(v_tables_does_not_exist, -942);
+begin
+	for i in reverse 1 .. gcat_helper.c_ordered_objects.count loop
+		begin
+			dbms_utility.exec_ddl_statement@gcat('drop table gcat.' || gcat_helper.c_ordered_objects(i) || ' purge');
+		exception when v_tables_does_not_exist then
+			null;
+		end;
+	end loop;
+end;
+/
+
+
+
+
+--------------------------------------------------------------------------------
+-- Import data to cloud. Run these steps from the CLOUD database.
+--------------------------------------------------------------------------------
+
+
+--Copy a (pre-authenticated) file from object storage to the database directory.
+--Add the new pre-authenticated URL below. Takes 5 seconds.
+begin
+	dbms_cloud.get_object
+	(
+		object_uri     => '&URL',
+		directory_name => 'DATA_PUMP_DIR'
+	);
+end;
+/
+
+--Ensure that new file exists in database directory
+select * from dbms_cloud.list_files('DATA_PUMP_DIR') order by created desc;
+
+
+--Import the dump file. Takes 40 seconds.
+declare
+  l_dp_handle       number;
+  v_date_string  varchar2(100) := to_char(sysdate, 'YYYYMMDDHH24MISS');
+  v_job_status   varchar2(128);
+begin
+  -- Open a schema import job.
+  l_dp_handle := dbms_datapump.open(
+    operation   => 'IMPORT',
+    job_mode    => 'TABLE',
+    job_name    => 'GCAT_IMPORT_'||v_date_string,
+    version     => 'LATEST');
+
+  -- Specify the dump file name and directory object name.
+  dbms_datapump.add_file(
+    handle    => l_dp_handle,
+    filename  => 'GCAT_20220223004933.DMP',
+    directory => 'DATA_PUMP_DIR');
+
+  -- Specify the log file name and directory object name.
+  dbms_datapump.add_file(
+    handle    => l_dp_handle,
+    filename  => 'GCAT_IMPORT_'||v_date_string||'.log',
+    directory => 'DATA_PUMP_DIR',
+    filetype  => DBMS_DATAPUMP.KU$_FILE_TYPE_LOG_FILE);
+
+  -- Perform a REMAP_TABLE.
+  dbms_datapump.metadata_remap(
+    handle     => l_dp_handle,
+    name       => 'REMAP_SCHEMA',
+    old_value  => 'JHELLER',
+    value      => 'GCAT');
+
+  dbms_datapump.start_job(l_dp_handle);
+
+  dbms_datapump.wait_for_job(
+    handle    => l_dp_handle,
+    job_state => v_job_status);
+
+  dbms_output.put_line ('DataPump Import - '||to_char(sysdate,'DD/MM/YYYY HH24:MI:SS')||' Status '||v_job_status);
+
+  dbms_datapump.detach(l_dp_handle);
+end;
+/
+
+
+--Find the newest file.
+select * from dbms_cloud.list_files('DATA_PUMP_DIR') order by created desc;
+
+
+--Read the logfile for any errors.
+select *
+from external
+(
+    (
+		line varchar2(4000)
+    )
+    default directory data_pump_dir
+    access parameters
+    (
+		records delimited by newline
+		fields
+		missing field values are null
+    )
+    location ('GCAT_IMPORT_20220225061609.log')
+);
+
+
+
+--Create grants and public synonyms.
+begin
+	execute immediate
+	q'[
+		create or replace procedure create_public_synonyms_and_grants as
+		begin
+			for tables in
+			(
+				select
+					'create or replace public synonym ' || object_name || ' for ' || owner || '.' || object_name v_synonym_sql,
+					'grant select on '||owner||'.'||object_name||' to GCAT_PUBLIC' v_grant_sql
+				from all_objects
+				where owner = 'GCAT'
+					and object_type not in ('INDEX')
+				order by object_name
+			) loop
+				execute immediate tables.v_synonym_sql;
+				execute immediate tables.v_grant_sql;
+			end loop;
+		end;
+	]';
+
+	execute immediate 'begin create_public_synonyms_and_grants; end;';
+
+	execute immediate
+	q'[
+		drop procedure create_public_synonyms_and_grants
+	]';
+end;
+/
+
