@@ -1,0 +1,60 @@
+
+
+--------------------------------------------------------------------------------
+-- Create Oracle Cloud Infrastructure (OCI) database - one time step
+--------------------------------------------------------------------------------
+
+Create Oracle Cloud account.
+
+Open this link to see the login screen: https://cloud.oracle.com/db/adb?region=us-ashburn-1
+
+Choose oracleidentitycloudservice and click Continue to enter password.
+
+Enter Username and Password to continue to Autonomous Database.
+
+Click "Create Autonomous Database"
+
+Change "Display name" and "Database name" to "gcat"
+
+Keep the free options
+
+Create and write down new password for "Create administrator credentials"
+
+Keep the default connection options
+
+Enter Contact Email
+
+Click "Create Autonomous Database"
+
+Wait about a minute for the database to provision and status to change to "Available"
+
+Click on "DB Connection" to setup local connections
+
+Change Wallet type to "Regional Wallet", so you will get metadata for all relevant instances.
+
+Create and write down new password for the wallet and save the file.
+
+Find the directory of your tnsnames.ora file by running this on your local command line:
+	tnsping anything
+
+Create a subdirectory named "gcatwallet" and copy the files from the downloaded ZIP file into that directory.
+
+In that new subdirectory, open the tnsnames.ora file and copy the new gcat entries and paste them into your normal tnsnames.ora file.
+
+Open your sqlnet.ora file and add a WALLET_LOCATION like this that refers to your new wallet subdirectory.
+	WALLET_LOCATION = (SOURCE = (METHOD = file) (METHOD_DATA = (DIRECTORY="D:\19c\WINDOWS.X64_193000_db_home\network\admin\gcatwallet")))
+
+You should be able to ping the new database from your local command line like this:
+	tnsping gcat_low
+
+You should be able to login to the new database like this:
+	sqlplus ADMIN/(admin password from above)@gcat_low
+
+(TODO: Create separate user for link, not ADMIN)
+Create database link from local machine to GCAT admin:
+	create database link gcat connect to admin identified by "<password from above>" using 'gcat_low';
+
+Test database link:
+	select * from dual@gcat;
+
+

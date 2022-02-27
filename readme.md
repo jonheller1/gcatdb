@@ -90,6 +90,23 @@ Full list of instances where GCAT text data is not identically mapped to the rel
 TODO: how to install, etc
 
 
+How to Load Data Into Your Database
+-----------------------------------
+
+TODO: Steps for local databases and OCI databases?
+
+
+How to Modify or Reload GCATDB
+------------------------------
+
+Most users can simply see the previous step about loading data. These steps are only for users who want to modify or recreate the process for building the GCATDB from scratch.
+
+See these files for instructions on building GCATDB from scratch:
+01_setup_local.sql
+02_setup_oci.txt
+03_reload_local.sql
+04_reload_oci.sql
+
 
 License
 -------
