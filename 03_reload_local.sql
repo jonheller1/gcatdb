@@ -1,3 +1,15 @@
+--------------------------------------------------------------------------------
+-- Instructions
+--------------------------------------------------------------------------------
+/*
+
+You should be able to run this entire file automatically.
+
+But if the data has been significantly updated, it's possible there are new data isuses that may break foreign keys, bad date formats, etc.
+
+*/
+
+
 
 
 --------------------------------------------------------------------------------
@@ -22,7 +34,7 @@ begin
 		from gcat_config_vw
 		--TEMP for TESTING - only use one file.
 		--where file_name = 'satcat.tsv'
-		where file_name like '%usatcat.tsv%'
+		--where file_name like '%usatcat.tsv%'
 		order by file_name
 	) loop
 		dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 1, argument_value => '--output');
@@ -711,16 +723,18 @@ select /*+ no_gather_optimizer_statistics */
 	l_mission,
 	l_flightcode,
 	l_p_code,
-	l_launch_lp_site_code,
-	l_launch_lp_code,
-	l_ascent_lp_site_code,
-	l_ascent_lp_code,
+	l_launch_site_lp_site_code,
+	l_launch_pad_lp_code,
+	l_ascent_site_lp_site_code,
+	l_ascent_pad_lp_code,
 	gcat_helper.gcat_to_number(l_apogee) l_apogee,
 	l_apoflag,
 	gcat_helper.gcat_to_number(l_range) l_range,
 	l_rangeflag,
 	l_dest,
-	l_launch_code,
+	l_launch_category,
+	l_launch_status,
+	gcat_helper.gcat_to_number(l_launch_success_fraction) l_launch_success_fraction,
 	l_group,
 	l_category,
 	l_primary_r_cite,
@@ -756,10 +770,11 @@ from
 		regexp_replace(rtrim(l_p_code, '?'), '^SS-088$', 'SS-083') l_p_code,
 		--FIX:
 		case
-			when l_launch_lp_site_code = 'PSCA' and l_launch_lp_code in ('LP2', 'LP2?') then 'KLC'
+			when l_launch_site_lp_site_code = 'PSCA' and l_launch_pad_lp_code in ('LP2', 'LP2?') then 'KLC'
+			when l_launch_site_lp_site_code = 'SPFLA' and l_launch_pad_lp_code in ('LC46', 'SLC46') then 'SPFL'
 			else
 				regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(
-					rtrim(l_launch_lp_site_code, '?')
+					rtrim(l_launch_site_lp_site_code, '?')
 					,'^NIIP-53$', 'GIK-1')
 					,'^NIIP-5$', 'GIK-5')
 					,'^GNIIPV$', 'GIK-1')
@@ -770,35 +785,43 @@ from
 					,'^VSFBS$', 'VS')
 					,'^VSFB$', 'V')
 					,'^USC', 'KASC')
-		end l_launch_lp_site_code,
+		end l_launch_site_lp_site_code,
 		--FIX:
 		case
-			when l_launch_lp_site_code = 'SPFL' and l_launch_lp_code = 'LC47' then 'SLC47'
-			when rtrim(l_launch_lp_site_code, '?') = 'JQ' and rtrim(l_launch_lp_code, '?') = 'LC43/95A' then 'LC43/95'
+			when l_launch_site_lp_site_code = 'SPFL' and l_launch_pad_lp_code = 'LC47' then 'SLC47'
+			when rtrim(l_launch_site_lp_site_code, '?') = 'JQ' and rtrim(l_launch_pad_lp_code, '?') = 'LC43/95A' then 'LC43/95'
+			when l_launch_site_lp_site_code = 'SPFLA' and l_launch_pad_lp_code in ('LC46', 'SLC46') then 'SLC46'
 			else
 				regexp_replace(regexp_replace(
-					rtrim(l_launch_lp_code, '?')
+					rtrim(l_launch_pad_lp_code, '?')
 					,'^LC603  ?$', 'LC603')
 					--I guessed which one it is
 					,'^LC81$', 'LC81/23')
-			end l_launch_lp_code,
-		regexp_replace(rtrim(l_ascent_lp_site_code, '?')
+			end l_launch_pad_lp_code,
+		regexp_replace(rtrim(l_ascent_site_lp_site_code, '?')
 			,'^DGAEML$', 'CEL')
-		l_ascent_lp_site_code,
+		l_ascent_site_lp_site_code,
 		--FIX:
 		case
-			when l_ascent_lp_site_code = 'KMR' and l_ascent_lp_code = 'Lp1' then 'LP1'
-			when l_ascent_lp_site_code = 'A51' and l_ascent_lp_code = 'X' then 'X1'
-			when l_launch_tag in ('1964-A158', '1964-A172', '1964-A170') and l_ascent_lp_code in ('A', 'A?') then 'ROS A'
-			when l_launch_tag in ('1968-A58') and l_ascent_lp_code in ('B') then 'ROS B'
-			else rtrim(l_ascent_lp_code, '?')
-		end l_ascent_lp_code,
+			when l_ascent_site_lp_site_code = 'KMR' and l_ascent_pad_lp_code = 'Lp1' then 'LP1'
+			when l_ascent_site_lp_site_code = 'A51' and l_ascent_pad_lp_code = 'X' then 'X1'
+			when l_launch_tag in ('1964-A158', '1964-A172', '1964-A170') and l_ascent_pad_lp_code in ('A', 'A?') then 'ROS A'
+			when l_launch_tag in ('1968-A58') and l_ascent_pad_lp_code in ('B') then 'ROS B'
+			else rtrim(l_ascent_pad_lp_code, '?')
+		end l_ascent_pad_lp_code,
 		l_apogee,
 		l_apoflag,
 		l_range,
 		l_rangeflag,
 		l_dest,
 		l_launch_code,
+		case
+			--Launches 1971-000("Duplicate of 1971-039") and 2014-000 ("Entry for unknown debris") have no category.
+			when l_launch_code = '-S' then null else
+			substr(l_launch_code, 1, 1)
+		end l_launch_category,
+		substr(l_launch_code, 2, 1) l_launch_status,
+		substr(l_launch_code, 3) l_launch_success_fraction,
 		l_group,
 		l_category,
 		l_primary_r_cite,
@@ -818,10 +841,10 @@ from
 			gcat_helper.convert_null_and_trim("Mission"    ) l_mission,
 			gcat_helper.convert_null_and_trim("FlightCode" ) l_flightcode,
 			gcat_helper.convert_null_and_trim("Platform"   ) l_p_code,
-			gcat_helper.convert_null_and_trim("Launch_Site") l_launch_lp_site_code,
-			gcat_helper.convert_null_and_trim("Launch_Pad" ) l_launch_lp_code,
-			gcat_helper.convert_null_and_trim("Ascent_Site") l_ascent_lp_site_code,
-			gcat_helper.convert_null_and_trim("Ascent_Pad" ) l_ascent_lp_code,
+			gcat_helper.convert_null_and_trim("Launch_Site") l_launch_site_lp_site_code,
+			gcat_helper.convert_null_and_trim("Launch_Pad" ) l_launch_pad_lp_code,
+			gcat_helper.convert_null_and_trim("Ascent_Site") l_ascent_site_lp_site_code,
+			gcat_helper.convert_null_and_trim("Ascent_Pad" ) l_ascent_pad_lp_code,
 			gcat_helper.convert_null_and_trim("Apogee"     ) l_apogee,
 			gcat_helper.convert_null_and_trim("Apoflag"    ) l_apoflag,
 			gcat_helper.convert_null_and_trim("Range"      ) l_range,
@@ -839,10 +862,10 @@ from
 
 alter table launch add constraint pk_launch primary key (l_launch_tag);
 alter table launch add constraint fk_launch_platform foreign key (l_p_code) references platform(p_code);
-alter table launch add constraint fk_launch_launch_site foreign key (l_launch_lp_site_code) references site(site_code);
-alter table launch add constraint fk_launch_launch_point  foreign key (l_launch_lp_site_code, l_launch_lp_code) references launch_point(lp_site_code, lp_code);
-alter table launch add constraint fk_launch_ascent_site foreign key (l_ascent_lp_site_code) references site(site_code);
-alter table launch add constraint fk_launch_ascent_point foreign key (l_ascent_lp_site_code, l_ascent_lp_code) references launch_point(lp_site_code, lp_code);
+alter table launch add constraint fk_launch_launch_site foreign key (l_launch_site_lp_site_code) references site(site_code);
+alter table launch add constraint fk_launch_launch_point foreign key (l_launch_site_lp_site_code, l_launch_pad_lp_code) references launch_point(lp_site_code, lp_code);
+alter table launch add constraint fk_launch_ascent_site foreign key (l_ascent_site_lp_site_code) references site(site_code);
+alter table launch add constraint fk_launch_ascent_point foreign key (l_ascent_site_lp_site_code, l_ascent_pad_lp_code) references launch_point(lp_site_code, lp_code);
 alter table launch add constraint fk_launch_launch_vehicle foreign key (l_lv_name, l_lv_variant) references launch_vehicle(lv_name, lv_variant);
 
 /*
@@ -860,39 +883,39 @@ where lv_name is null;
 select *
 from launch
 left join site
-	on launch.l_launch_lp_site_code = site.site_code
+	on launch.l_launch_site_lp_site_code = site.site_code
 where site.site_code is null;
 
---Check that "Launch_Site" and "Launch_Pad" matches values in Launch_Point.
-select l_launch_tag, l_launch_lp_site_code, l_launch_lp_code
+--FK_LAUNCH_LAUNCH_POINT - Check that Launch.Launch_Site and Launch.Launch_Pad match values in Launch_Point.
+select l_launch_tag, l_launch_site_lp_site_code, l_launch_pad_lp_code
 from launch
 left join launch_point
-	on l_launch_lp_site_code = lp_site_code
-	and l_launch_lp_code = lp_code
-where l_launch_lp_code is not null
+	on l_launch_site_lp_site_code = lp_site_code
+	and l_launch_pad_lp_code = lp_code
+where l_launch_pad_lp_code is not null
 	and lp_site_code is null
 	and lp_code is null
-order by l_launch_lp_site_code;
+order by l_launch_site_lp_site_code;
 
 --Check that "Ascent_Site" matches site.s_code.
-select l_launch_tag, l_ascent_lp_site_code
+select l_launch_tag, l_ascent_site_lp_site_code
 from launch
 left join site
-	on launch.l_ascent_lp_site_code = site.site_code
+	on launch.l_ascent_site_lp_site_code = site.site_code
 where
-	l_ascent_lp_site_code is not null
+	l_ascent_site_lp_site_code is not null
 	and site.site_code is null;
 
 --FK_LAUNCH_ASCENT_POINT - Check ascent values match Launch_Point.
-select l_launch_tag, l_ascent_lp_site_code, l_ascent_lp_code
+select l_launch_tag, l_ascent_site_lp_site_code, l_ascent_pad_lp_code
 from launch
 left join launch_point
-	on l_ascent_lp_site_code = lp_site_code
-	and l_ascent_lp_code = lp_code
-where l_ascent_lp_code is not null
+	on l_ascent_site_lp_site_code = lp_site_code
+	and l_ascent_pad_lp_code = lp_code
+where l_ascent_pad_lp_code is not null
 	and lp_site_code is null
 	and lp_code is null
-order by l_ascent_lp_site_code;
+order by l_ascent_site_lp_site_code;
 */
 
 
@@ -1286,6 +1309,8 @@ from
 		s_SpanFlag,
 		s_shape,
 		case
+			when s_ODate = '2021 Fen 14' then '2021 Feb 14'
+			when s_ODate = '2021 Fen  7' then '2021 Feb  7'
 			when s_ODate = '1973 Jan  13' then '1973 Jan 13'
 			when s_ODate = '2011 Aug  16' then '2011 Aug 16'
 			else s_ODate
@@ -1377,6 +1402,26 @@ alter table satellite add constraint fk_satellite_state_org foreign key (s_state
 --alter table satellite add constraint pk_satellite primary key(s_jcat);
 create index satellite_idx1 on satellite(s_jcat);
 alter table satellite modify s_jcat not null;
+
+/*
+--Check for bad dates, so we know which file it came from
+select *
+from
+(
+	select 'auxcat'  s_catalog, auxcat_staging.*  from auxcat_staging  union all
+	select 'csocat'  s_catalog, csocat_staging.*  from csocat_staging  union all
+	select 'deepcat' s_catalog, deepcat_staging.* from deepcat_staging union all
+	select 'ecat'    s_catalog, ecat_staging.*    from ecat_staging    union all
+	select 'ftocat'  s_catalog, ftocat_staging.*  from ftocat_staging  union all
+	select 'hcocat'  s_catalog, hcocat_staging.*  from hcocat_staging  union all
+	select 'lcat'    s_catalog, lcat_staging.*    from lcat_staging    union all
+	select 'lprcat'  s_catalog, lprcat_staging.*  from lprcat_staging  union all
+	select 'rcat'    s_catalog, rcat_staging.*    from rcat_staging    union all
+	select 'satcat'  s_catalog, satcat_staging.*  from satcat_staging  union all
+	select 'tmpcat'  s_catalog, tmpcat_staging.*  from tmpcat_staging
+)
+where "ODate" = '2021 Fen 14';
+*/
 
 --Ensure all parents exist.
 --Can't use a foreign key because of the weird table structures.
@@ -1477,7 +1522,10 @@ from
 		pay_JCAT,
 		pay_Piece,
 		pay_Name,
-		pay_LDate,
+		case
+			when pay_LDate = '22 Feb 27' then '2022 Feb 27'
+			else pay_LDate
+		end pay_LDate,
 		pay_TLast,
 		pay_TOp,
 		case
@@ -1543,6 +1591,20 @@ order by 1,2,3;
 
 alter table payload add constraint pk_payload primary key(pay_jcat);
 alter table payload add constraint fk_payload_org foreign key (pay_UNState_o_code) references organization(o_code);
+
+
+/*
+--Find which files have invalid dates.
+select *
+from
+(
+	select 'pauxcat' pay_catalog, pauxcat_staging.* from pauxcat_staging union all
+	select 'pftocat' pay_catalog, pftocat_staging.* from pftocat_staging union all
+	select 'plcat'   pay_catalog, plcat_staging.*   from plcat_staging union all
+	select 'psatcat' pay_catalog, psatcat_staging.* from psatcat_staging
+)
+where "LDate" = '22 Feb 27';
+*/
 
 
 --PAYLOAD_CATEGORY
