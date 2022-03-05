@@ -1,3 +1,22 @@
+--------------------------------------------------------------------------------
+-- Instructions
+--------------------------------------------------------------------------------
+-- These steps are only semi-automated. Read the comments on each step.
+
+
+
+
+
+--------------------------------------------------------------------------------
+-- Move files to OCI.
+--------------------------------------------------------------------------------
+
+-- 1: Manually copy the export file to OCI storage. The file name should be like this: GCAT_YYYYMMDDHH24MISS.DMP
+-- 2: Click on the "..." by the uploaded file, click "Create Pre-Authenticated Request",
+--  use defaults and click "Create Pre-Authenticated Request" button, copy URL into below statement.
+
+
+
 
 --------------------------------------------------------------------------------
 -- Import data to cloud. Run these steps from the CLOUD database.
@@ -21,7 +40,8 @@ select * from dbms_cloud.list_files('DATA_PUMP_DIR') order by created desc;
 
 --Import the dump file. Takes 40 seconds.
 declare
-  l_dp_handle       number;
+  v_file_name    varchar2(128) := 'GCAT_20220227225030.DMP';
+  l_dp_handle    number;
   v_date_string  varchar2(100) := to_char(sysdate, 'YYYYMMDDHH24MISS');
   v_job_status   varchar2(128);
 begin
@@ -35,7 +55,7 @@ begin
   -- Specify the dump file name and directory object name.
   dbms_datapump.add_file(
     handle    => l_dp_handle,
-    filename  => 'GCAT_20220223004933.DMP',
+    filename  => v_file_name,
     directory => 'DATA_PUMP_DIR');
 
   -- Specify the log file name and directory object name.
@@ -65,7 +85,7 @@ end;
 /
 
 
---Find the newest file.
+--Find the newest log file, add it to the query below.
 select * from dbms_cloud.list_files('DATA_PUMP_DIR') order by created desc;
 
 
@@ -83,7 +103,7 @@ from external
 		fields
 		missing field values are null
 	)
-	location ('GCAT_IMPORT_20220225061609.log')
+	location ('GCAT_IMPORT_20220228073349.log')
 );
 
 
@@ -118,4 +138,12 @@ begin
 	]';
 end;
 /
+
+
+
+
+--Check the public URL: https://pa6nsglmabwahpe-gcat.adb.us-ashburn-1.oraclecloudapps.com/ords/GCAT_PUBLIC/_sdw/?nav=worksheet
+--You may have to try multiple times and wait several minutes.
+--Ignore 503 errors, refresh if the page just has the loading icon for a few minutes, and ignore "An error occurred. Please make sure you have an stable connection and try again."
+
 

@@ -1,13 +1,8 @@
 --------------------------------------------------------------------------------
 -- Instructions
 --------------------------------------------------------------------------------
-/*
-
-You should be able to run this entire file automatically.
-
-But if the data has been significantly updated, it's possible there are new data isuses that may break foreign keys, bad date formats, etc.
-
-*/
+-- You should be able to run this entire file automatically.
+-- But if the data has been significantly updated, it's possible there are new data isuses that may break foreign keys, bad date formats, etc.
 
 
 
@@ -16,7 +11,6 @@ But if the data has been significantly updated, it's possible there are new data
 -- Download the files into the directory. Takes about 1 minute.
 -- (Must run this, and everything below, as your normal user.)
 --------------------------------------------------------------------------------
-
 declare
 	v_name varchar(20) := 'SYS.GCAT_CURL_JOB';
 	v_directory_path varchar2(128);
@@ -55,7 +49,6 @@ select directory_path from dba_directories where directory_name = 'DATA_PUMP_DIR
 -- Check file headers for unexpected changes.
 --   File header changes will probably require manual intervention, like changing columns.
 --------------------------------------------------------------------------------
-
 -- Raise an exception if any of the file headers are unexpected.
 declare
 	v_template varchar2(4000) :=
@@ -2195,11 +2188,6 @@ end;
 /
 
 
---Public URL:
---(Initial schema will be empty.)
---https://pa6nsglmabwahpe-gcat.adb.us-ashburn-1.oraclecloudapps.com/ords/GCAT_PUBLIC/_sdw/?nav=worksheet
-
-
 
 
 --------------------------------------------------------------------------------
@@ -2288,13 +2276,3 @@ from   dba_datapump_jobs
 where job_name like 'GCAT%'
 order by 1, 2;
 */
-
-
-
---------------------------------------------------------------------------------
--- Manually copy the file to OCI storage: GCAT_YYYYMMDDHH24MISS.DMP
---------------------------------------------------------------------------------
-
--- Click on the "..." by the uploaded file, click "Create Pre-Authenticated Request",
---  use defaults and click "Create Pre-Authenticated Request" button, copy URL into below statement.
-
