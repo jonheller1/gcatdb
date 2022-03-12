@@ -1,12 +1,10 @@
-
-
 --------------------------------------------------------------------------------
 -- Create Oracle Cloud Infrastructure (OCI) database - one time step
 --------------------------------------------------------------------------------
 
 Create Oracle Cloud account.
 
-Open this link to see the login screen: https://cloud.oracle.com/db/adb?region=us-ashburn-1
+Open this link to see the login screen: https://cloud.oracle.com/db/adb
 
 Choose oracleidentitycloudservice and click Continue to enter password.
 
@@ -17,6 +15,8 @@ Click "Create Autonomous Database"
 Change "Display name" and "Database name" to "gcat"
 
 Keep the free options
+
+Set database version to 21c (19c was tested and also works)
 
 Create and write down new password for "Create administrator credentials"
 
@@ -30,9 +30,9 @@ Wait about a minute for the database to provision and status to change to "Avail
 
 Click on "DB Connection" to setup local connections
 
-Change Wallet type to "Regional Wallet", so you will get metadata for all relevant instances.
+Change Wallet type from "Instance Wallet" to "Regional Wallet", so you will get metadata for all relevant instances.
 
-Create and write down new password for the wallet and save the file.
+Create and write down new password for the wallet, click "Download" and save the file.
 
 Find the directory of your tnsnames.ora file by running this on your local command line:
 	tnsping anything
@@ -57,4 +57,19 @@ Create database link from local machine to GCAT admin:
 Test database link:
 	select * from dual@gcat;
 
+Create a database job that will ping the remote database to keep it alive. (Unused databases are stopped after seven days, and eventually terminated.)
+	begin
+		dbms_scheduler.create_job
+		(
+			job_name        => 'ping_gcat_oci_database_to_keep_it_running',
+			job_type        => 'PLSQL_BLOCK',
+			job_action      => 'declare v_dummy varchar2(1); begin select dummy into v_dummy from dual@gcat; end;',
+			start_date      => systimestamp,
+			repeat_interval => 'freq=daily;',
+			enabled         => true
+		);
+	end;
+/
 
+Configuration is complete!
+/
