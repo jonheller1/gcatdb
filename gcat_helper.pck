@@ -62,7 +62,8 @@ create or replace package body gcat_helper is
 	begin
 		l_bfile := bfilename(p_dir, p_filename);
 		dbms_lob.fileopen(l_bfile, dbms_lob.file_readonly);
-		dbms_lob.createtemporary(l_blob, false);
+		-- Caching doubles performance.
+		dbms_lob.createtemporary(l_blob, cache => true);
 		if dbms_lob.getlength(l_bfile) > 0 then
 		dbms_lob.loadblobfromfile (
 			dest_lob    => l_blob,

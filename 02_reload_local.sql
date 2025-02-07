@@ -114,6 +114,9 @@ declare
 		where col001 not like '#%'
 	]';
 	v_sql varchar2(32767);
+	-- Set this variable to quickly debug a single staging table.
+	--v_debug_staging_table_name varchar2(128) := 'LAUNCH_STAGING';
+	v_debug_staging_table_name varchar2(128) := null;
 begin
 	--Drop existing staging tables.
 	declare
@@ -124,6 +127,7 @@ begin
 		(
 			select staging_table_name
 			from gcat_config_vw
+			where staging_table_name = nvl(upper(v_debug_staging_table_name), staging_table_name)
 			order by staging_table_name
 		) loop
 			begin
@@ -160,6 +164,7 @@ begin
 					row_number() over (partition by file_name order by rownum) rownumber
 				from gcat_config_vw
 				cross join table(gcat_helper.get_nt_from_list(p_delimiter => '	', p_list => first_line))
+				where staging_table_name = nvl(upper(v_debug_staging_table_name), staging_table_name)
 			)
 		)
 		group by file_name, staging_table_name
@@ -245,6 +250,8 @@ end;
 --ORGANIZATION_TYPE:
 create table organization_type compress as
 select 'CY'  ot_type, 'Country (i.e. nation-state or autonomous region)'                                                                                              ot_meaning, 'States and similar entities'  ot_group from dual union all
+-- FIX  - CYP is in orgs.tsv but not explained on https://planet4589.org/space/gcat/web/orgs/index.html. I guessed the meaning.
+select 'CYP'  ot_type, 'Country Province'                                                                                                                             ot_meaning, 'States and similar entities'  ot_group from dual union all
 select 'IGO' ot_type, 'Intergovernmental organization. Treated as equivalent to a country for the purposes of tabulations of launches by country etc.'                ot_meaning, 'States and similar entities'  ot_group from dual union all
 select 'AP'  ot_type, 'Astronomical Polity: e.g. Luna, Mars. Used for the ''country'' field for locations that are not on Earth and therefore don''t have a country.' ot_meaning, 'States and similar entities'  ot_group from dual union all
 select 'E'   ot_type, 'Engine manufacturer'                                                                                                                           ot_meaning, 'Manufacturers'                ot_group from dual union all
@@ -663,16 +670,16 @@ from
 alter table launch_vehicle add constraint uq_launch_vehicle unique(lv_name, lv_variant);
 alter table launch_vehicle add constraint fk_launch_vehicle_launch_vehicle_family foreign key (lv_lvf_family) references launch_vehicle_family(lvf_family);
 
-
 --LAUNCH_VEHICLE_ORG
 create table launch_vehicle_org compress as
 select
 	cast(gcat_helper.convert_null_and_trim("LV_Name"   ) as varchar2(1000)) lvo_lv_name,
 	cast(gcat_helper.convert_null_and_trim("LV_Variant") as varchar2(1000)) lvo_lv_variant,
 	--FIXES:
-	replace(replace(replace(replace(column_value, '?'),
+	replace(replace(replace(replace(replace(column_value, '?'),
 		'SKYRO','SKYR'),
 		'ROKTSN','ROKSN'),
+		'TIAB', 'TIANB'),
 		'NCSIST','') --TODO: Missing data from orgs.tsv?
 	lvo_o_code
 from lv_staging
@@ -725,6 +732,7 @@ select /*+ no_gather_optimizer_statistics */
 	gcat_helper.gcat_to_number(l_range) l_range,
 	l_rangeflag,
 	l_dest,
+	l_orbpay,
 	l_launch_category,
 	l_launch_status,
 	gcat_helper.gcat_to_number(l_launch_success_fraction) l_launch_success_fraction,
@@ -740,12 +748,10 @@ from
 		l_launch_tag,
 		l_launch_jd,
 		--FIX:
-		replace(replace(replace(replace(replace(l_launch_date
+		replace(replace(replace(l_launch_date
 			, '1963 Jun   5', '1963 Jun  5')
 			, '1963 Jun  25', '1963 Jun 25')
 			, '1963 Jun  26', '1963 Jun 26')
-			, '1971 Mar 24 1832:0', '1971 Mar 24 1832:00')
-			, '1971 Jul 31 2334:0', '1971 Jul 31 2334:00')
 		l_launch_date,
 		--FIX:
 		case
@@ -765,6 +771,7 @@ from
 		case
 			when l_launch_site_lp_site_code = 'PSCA' and l_launch_pad_lp_code in ('LP2', 'LP2?') then 'KLC'
 			when l_launch_site_lp_site_code = 'SPFLA' and l_launch_pad_lp_code in ('LC46', 'SLC46') then 'SPFL'
+			when l_launch_site_lp_site_code = 'CC' and l_launch_pad_lp_code in ('LC46') then 'CCA'
 			else
 				regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(
 					rtrim(l_launch_site_lp_site_code, '?')
@@ -784,6 +791,11 @@ from
 			when l_launch_site_lp_site_code = 'SPFL' and l_launch_pad_lp_code = 'LC47' then 'SLC47'
 			when rtrim(l_launch_site_lp_site_code, '?') = 'JQ' and rtrim(l_launch_pad_lp_code, '?') = 'LC43/95A' then 'LC43/95'
 			when l_launch_site_lp_site_code = 'SPFLA' and l_launch_pad_lp_code in ('LC46', 'SLC46') then 'SLC46'
+			when l_launch_site_lp_site_code = 'GUAMA' and l_launch_pad_lp_code in ('LP1') then 'LA1'
+			when l_launch_site_lp_site_code = 'JQ' and l_launch_pad_lp_code in ('LC43/96A') then 'LC43/96'
+			when l_launch_site_lp_site_code = 'PF' and l_launch_pad_lp_code in ('Pad 3 L2') then 'LC3'
+			when l_launch_site_lp_site_code = 'KRASK' and l_launch_pad_lp_code in ('YEYSK') then null
+			when l_launch_site_lp_site_code = 'VOLR' and l_launch_pad_lp_code in ('BELG') then null
 			else
 				regexp_replace(regexp_replace(
 					rtrim(l_launch_pad_lp_code, '?')
@@ -807,6 +819,7 @@ from
 		l_range,
 		l_rangeflag,
 		l_dest,
+		l_orbpay,
 		l_launch_code,
 		case
 			--Launches 1971-000("Duplicate of 1971-039") and 2014-000 ("Entry for unknown debris") have no category.
@@ -843,6 +856,7 @@ from
 			gcat_helper.convert_null_and_trim("Range"      ) l_range,
 			gcat_helper.convert_null_and_trim("RangeFlag"  ) l_rangeflag,
 			gcat_helper.convert_null_and_trim("Dest"       ) l_dest,
+			gcat_helper.convert_null_and_trim("OrbPay"     ) l_orbpay,
 			gcat_helper.convert_null_and_trim("Launch_Code") l_launch_code,
 			gcat_helper.convert_null_and_trim("Group"      ) l_group,
 			gcat_helper.convert_null_and_trim("Category"   ) l_category,
@@ -855,6 +869,8 @@ from
 
 alter table launch add constraint pk_launch primary key (l_launch_tag);
 alter table launch add constraint fk_launch_platform foreign key (l_p_code) references platform(p_code);
+--Note: Unusual data model here. The "Launch_Site" maps to sites.tsv "Site_Code",
+--      and the combination of "Launch_Site" and "Launch_Pad" map to lp.tsv "Site" and "Code".
 alter table launch add constraint fk_launch_launch_site foreign key (l_launch_site_lp_site_code) references site(site_code);
 alter table launch add constraint fk_launch_launch_point foreign key (l_launch_site_lp_site_code, l_launch_pad_lp_code) references launch_point(lp_site_code, lp_code);
 alter table launch add constraint fk_launch_ascent_site foreign key (l_ascent_site_lp_site_code) references site(site_code);
@@ -1493,6 +1509,8 @@ select /*+ no_gather_optimizer_statistics */
 	pay_Att,
 	pay_Mvr,
 	pay_Class,
+	pay_Result,
+	pay_Control,
 	replace(replace(replace(pay_UNState, '*'), '['), ']') pay_UNState_o_code,
 	case
 		when pay_unstate is null then null
@@ -1504,8 +1522,10 @@ select /*+ no_gather_optimizer_statistics */
 	gcat_helper.gcat_to_number(pay_UNPerigee) pay_UNPerigee,
 	gcat_helper.gcat_to_number(pay_UNApogee) pay_UNApogee,
 	gcat_helper.gcat_to_number(pay_UNInc) pay_UNInc,
-	pay_Result,
-	pay_Control,
+	gcat_helper.gcat_to_number(pay_DispEpoch) pay_DispEpoch,
+	gcat_helper.gcat_to_number(pay_DispPeri) pay_DispPeri,
+	gcat_helper.gcat_to_number(pay_DispApo) pay_DispApo,
+	gcat_helper.gcat_to_number(pay_DispInc) pay_DispInc,
 	pay_Comment
 from
 (
@@ -1535,14 +1555,18 @@ from
 			else pay_Mvr
 		end pay_Mvr,
 		pay_Class,
+		pay_Result,
+		pay_Control,
 		pay_UNState,
 		pay_UNReg,
 		pay_UNPeriod,
 		pay_UNPerigee,
 		pay_UNApogee,
 		pay_UNInc,
-		pay_Result,
-		pay_Control,
+		pay_DispEpoch,
+		pay_DispPeri,
+		pay_DispApo,
+		pay_DispInc,
 		pay_Comment
 	from
 	(
@@ -1562,21 +1586,28 @@ from
 			gcat_helper.convert_null_and_trim("Att"       ) pay_Att,
 			gcat_helper.convert_null_and_trim("Mvr"       ) pay_Mvr,
 			gcat_helper.convert_null_and_trim("Class"     ) pay_Class,
+			gcat_helper.convert_null_and_trim("Result"    ) pay_Result,
+			gcat_helper.convert_null_and_trim("Control"   ) pay_Control,
 			gcat_helper.convert_null_and_trim("UNState"   ) pay_UNState,
 			gcat_helper.convert_null_and_trim("UNReg"     ) pay_UNReg,
 			gcat_helper.convert_null_and_trim("UNPeriod"  ) pay_UNPeriod,
 			gcat_helper.convert_null_and_trim("UNPerigee" ) pay_UNPerigee,
 			gcat_helper.convert_null_and_trim("UNApogee"  ) pay_UNApogee,
 			gcat_helper.convert_null_and_trim("UNInc"     ) pay_UNInc,
-			gcat_helper.convert_null_and_trim("Result"    ) pay_Result,
-			gcat_helper.convert_null_and_trim("Control"   ) pay_Control,
+			gcat_helper.convert_null_and_trim("DispEpoch" ) pay_DispEpoch,
+			gcat_helper.convert_null_and_trim("DispPeri"  ) pay_DispPeri,
+			gcat_helper.convert_null_and_trim("DispApo"   ) pay_DispApo,
+			gcat_helper.convert_null_and_trim("DispInc"   ) pay_DispInc,
 			gcat_helper.convert_null_and_trim("Comment"   ) pay_Comment
 		from
 		(
-			select 'pauxcat' pay_catalog, pauxcat_staging.* from pauxcat_staging union all
-			select 'pftocat' pay_catalog, pftocat_staging.* from pftocat_staging union all
-			select 'plcat'   pay_catalog, plcat_staging.*   from plcat_staging union all
-			select 'psatcat' pay_catalog, psatcat_staging.* from psatcat_staging
+			select 'psatcat'  pay_catalog, psatcat_staging.* from psatcat_staging  union all
+			select 'pauxcat'  pay_catalog, pauxcat_staging.* from pauxcat_staging  union all
+			select 'pftocat'  pay_catalog, pftocat_staging.* from pftocat_staging  union all
+			select 'ptmpcat'  pay_catalog, pftocat_staging.* from ptmpcat_staging  union all
+			select 'plcat'    pay_catalog, plcat_staging.*   from plcat_staging    union all
+			select 'prcat'    pay_catalog, pftocat_staging.* from prcat_staging    union all
+			select 'pdeepcat' pay_catalog, pftocat_staging.* from pdeepcat_staging
 		)
 	) rename_columns
 ) fix_data
@@ -1591,10 +1622,13 @@ alter table payload add constraint fk_payload_org foreign key (pay_UNState_o_cod
 select *
 from
 (
-	select 'pauxcat' pay_catalog, pauxcat_staging.* from pauxcat_staging union all
-	select 'pftocat' pay_catalog, pftocat_staging.* from pftocat_staging union all
-	select 'plcat'   pay_catalog, plcat_staging.*   from plcat_staging union all
-	select 'psatcat' pay_catalog, psatcat_staging.* from psatcat_staging
+	select 'psatcat'  pay_catalog, psatcat_staging.* from psatcat_staging  union all
+	select 'pauxcat'  pay_catalog, pauxcat_staging.* from pauxcat_staging  union all
+	select 'pftocat'  pay_catalog, pftocat_staging.* from pftocat_staging  union all
+	select 'ptmpcat'  pay_catalog, pftocat_staging.* from ptmpcat_staging  union all
+	select 'plcat'    pay_catalog, plcat_staging.*   from plcat_staging    union all
+	select 'prcat'    pay_catalog, pftocat_staging.* from prcat_staging    union all
+	select 'pdeepcat' pay_catalog, pftocat_staging.* from pdeepcat_staging
 )
 where "LDate" = '22 Feb 27';
 */
@@ -1608,10 +1642,13 @@ select
 	case when column_value like '%*%' then 'Yes' else 'No' end pc_is_secret
 from
 (
-	select 'pauxcat' pay_catalog, pauxcat_staging.* from pauxcat_staging union all
-	select 'pftocat' pay_catalog, pftocat_staging.* from pftocat_staging union all
-	select 'plcat'   pay_catalog, plcat_staging.*   from plcat_staging union all
-	select 'psatcat' pay_catalog, psatcat_staging.* from psatcat_staging
+	select 'psatcat'  pay_catalog, psatcat_staging.* from psatcat_staging  union all
+	select 'pauxcat'  pay_catalog, pauxcat_staging.* from pauxcat_staging  union all
+	select 'pftocat'  pay_catalog, pftocat_staging.* from pftocat_staging  union all
+	select 'ptmpcat'  pay_catalog, pftocat_staging.* from ptmpcat_staging  union all
+	select 'plcat'    pay_catalog, plcat_staging.*   from plcat_staging    union all
+	select 'prcat'    pay_catalog, pftocat_staging.* from prcat_staging    union all
+	select 'pdeepcat' pay_catalog, pftocat_staging.* from pdeepcat_staging
 )
 cross join gcat_helper.get_nt_from_list(rtrim("Category", '?'), '/')
 where "Category" <> '-'
@@ -1628,10 +1665,13 @@ select
 	replace(replace(column_value, '?'), '*') pd_discipline
 from
 (
-	select 'pauxcat' pay_catalog, pauxcat_staging.* from pauxcat_staging union all
-	select 'pftocat' pay_catalog, pftocat_staging.* from pftocat_staging union all
-	select 'plcat'   pay_catalog, plcat_staging.*   from plcat_staging union all
-	select 'psatcat' pay_catalog, psatcat_staging.* from psatcat_staging
+	select 'psatcat'  pay_catalog, psatcat_staging.* from psatcat_staging  union all
+	select 'pauxcat'  pay_catalog, pauxcat_staging.* from pauxcat_staging  union all
+	select 'pftocat'  pay_catalog, pftocat_staging.* from pftocat_staging  union all
+	select 'ptmpcat'  pay_catalog, pftocat_staging.* from ptmpcat_staging  union all
+	select 'plcat'    pay_catalog, plcat_staging.*   from plcat_staging    union all
+	select 'prcat'    pay_catalog, pftocat_staging.* from prcat_staging    union all
+	select 'pdeepcat' pay_catalog, pftocat_staging.* from pdeepcat_staging
 )
 cross join gcat_helper.get_nt_from_list(rtrim("Discipline", '?'), '/')
 where "Discipline" <> '-'
