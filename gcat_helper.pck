@@ -46,6 +46,7 @@ create or replace package gcat_helper authid current_user is
 	function gcat_to_number(p_number_string varchar2) return number;
 	function gcat_to_binary_double(p_number_string varchar2) return binary_double;
 	function convert_null_and_trim(p_string in varchar2) return varchar2;
+	function is_orbital(p_launch_code in varchar2) return number;
 end gcat_helper;
 /
 create or replace package body gcat_helper is
@@ -362,6 +363,25 @@ create or replace package body gcat_helper is
 			return trim(p_string);
 		end if;
 	end convert_null_and_trim;
+
+
+	---------------------------------------
+	-- Purpose: Determine if a launch code is "orbital" or not.
+	--   Orbital here means not necessarily the "o" code, but more like "a launch more than just suborbital."
+	-- P_LAUNCH_CODE: The "Launch_Code" value from the file - may be multiple characters and should always exist.
+	-- Returns: 1 for true and 0 for false. (This function is used in a SQL context and cannot return boolean.)
+	function is_orbital(p_launch_code in varchar2) return number is
+		pragma udf;
+	begin
+		if substr(p_launch_code, 1, 1) in ('D', 'O', 'X') then
+			return 1;
+		elsif substr(p_launch_code, 1, 1) in ('A', 'H', 'M', 'R', 'S', 'T', 'Y') then
+			return 0;
+		else
+			raise_application_error(-20001, 'Cannot determine if launch code "'||p_launch_code||'" is orbital or not.');
+		end if;
+	end is_orbital;
+
 
 end gcat_helper;
 /

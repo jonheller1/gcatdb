@@ -736,7 +736,7 @@ select /*+ no_gather_optimizer_statistics */
 	l_launch_category,
 	l_launch_status,
 	gcat_helper.gcat_to_number(l_launch_success_fraction) l_launch_success_fraction,
-	l_group,
+	launch_service_type,
 	l_category,
 	l_primary_r_cite,
 	l_additional_r_cite,
@@ -829,6 +829,49 @@ from
 		substr(l_launch_code, 2, 1) l_launch_status,
 		substr(l_launch_code, 3) l_launch_success_fraction,
 		l_group,
+		-- Begin Code to normalize "Group".
+		-- (Not all columns are used for this this table, but I want to show all the logic in one place.)
+		-- Agencies to the left of the last slash.
+		case when l_launch_code is null then
+			null
+		when gcat_helper.is_orbital(l_launch_code) = 0 then
+			substr(l_group, 1, instr(l_group, '/', -1)-1)
+		else
+			null
+		end agencies,
+		-- PIs to the right of the last slash.
+		case when l_launch_code is null then
+			null
+		when gcat_helper.is_orbital(l_launch_code) = 0 then
+			substr(l_group, instr(l_group, '/', -1)+1)
+		else
+			null
+		end pis,
+		-- Launch Service Type to the left of the first slash, or everything if there is no slash.
+		case when l_launch_code is null then
+			null
+		when gcat_helper.is_orbital(l_launch_code) = 1 then
+			case when instr(l_group, '/') = 0 then
+				l_group
+			else
+				substr(l_group, 1, instr(l_group, '/', 1)-1)
+			end
+		else
+			null
+		end launch_service_type,
+		-- Satellite Customer Types to the left of the first slash, or nothing is ther is no slash
+		case when l_launch_code is null then
+			null
+		when gcat_helper.is_orbital(l_launch_code) = 1 then
+			case when instr(l_group, '/') = 0 then
+				null
+			else
+				substr(l_group, instr(l_group, '/', -1)+1)
+			end
+		else
+			null
+		end satellite_customer_types,
+		-- End Code to normalize "Group".
 		l_category,
 		l_primary_r_cite,
 		l_additional_r_cite,
@@ -858,7 +901,12 @@ from
 			gcat_helper.convert_null_and_trim("Dest"       ) l_dest,
 			gcat_helper.convert_null_and_trim("OrbPay"     ) l_orbpay,
 			gcat_helper.convert_null_and_trim("Launch_Code") l_launch_code,
-			gcat_helper.convert_null_and_trim("Group"      ) l_group,
+			--Fix:
+			case
+				when "Launch_Tag" = '1969-F13' then 'G'
+				when "Launch_Tag" = '2000-048' then 'CO'
+				else gcat_helper.convert_null_and_trim("Group")
+			end l_group,
 			gcat_helper.convert_null_and_trim("Category"   ) l_category,
 			gcat_helper.convert_null_and_trim("LTCite"     ) l_primary_r_cite,
 			gcat_helper.convert_null_and_trim("Cite"       ) l_additional_r_cite,
@@ -964,6 +1012,9 @@ select
 	case
 		when lpo_l_launch_tag = '1964-S509' and column_value = 'PARL' then 'LPARL'
 		when lpo_l_launch_tag = '1965-W199' and column_value = 'AGPC' then 'APGC'
+		when lpo_l_launch_tag in ('2024-S69', '2024-S70') and column_value = 'Clemson' then 'CLEM'
+		when lpo_l_launch_tag = '2024-S86' and column_value = 'UM' then 'UMI'
+		when lpo_l_launch_tag in ('2023-S29', '2024-S76', '2024-S85') and column_value = 'C' then 'RLABU'
 		else column_value
 	end lpo_o_code
 from
@@ -971,14 +1022,18 @@ from
 	--Get the list of payload orgs by including only things before the last slash.
 	select
 		"Launch_Tag" lpo_l_launch_tag,
+		"Launch_Code",
 		rtrim(regexp_substr(replace("Group", '?'), '.*/'), '/') payload_orgs
 	from launch_staging
 	where "Group" <> '-'
 		--FIX: Ignore this value until RIT exists in orgs file.
 		and not ("Launch_Tag" = '2021-S34' and "Group" = 'RIT/Zemcov')
+		and "Launch_Tag" in ('2023-S29', '2024-S76', '2024-S85')
 ) payload_list
 cross join gcat_helper.get_nt_from_list(payload_orgs, '/')
 where payload_orgs is not null
+	-- Agencies only apply to non-orbital launches
+	and gcat_helper.is_orbital("Launch_Code") = 0
 order by 1,2;
 
 alter table launch_payload_org add constraint pk_launch_payload_org primary key(lpo_l_launch_tag, lpo_o_code);
@@ -991,7 +1046,15 @@ select *
 from launch_payload_org
 left join organization
 	on lpo_o_code = o_code
-where o_code is null;
+where o_code is null
+order by lpo_l_launch_tag;
+
+select *
+from launch_staging
+where "Launch_Tag" in ('2023-S29', '2024-S69', '2024-S70', '2024-S76', '2024-S85', '2024-S86');
+
+--where "Group" like '%C%'
+--	and gcat_helper.is_orbital("Launch_Code") = 0
 */
 
 
@@ -1005,12 +1068,15 @@ from
 	--Get the list of investigators by removing everything before the last slash.
 	select
 		"Launch_Tag" li_l_launch_tag,
+		"Launch_Code",
 		regexp_replace(replace("Group", '?'), '.*/') investigators
 	from launch_staging
 	where "Group" <> '-'
 ) investigators_list
 cross join gcat_helper.get_nt_from_list(investigators, ',')
-where investigators is not null;
+where investigators is not null
+	-- Investigators only apply to non-orbital launches
+	and gcat_helper.is_orbital("Launch_Code") = 0;
 
 alter table launch_investigator add constraint pk_launch_investigator primary key(li_l_launch_tag, li_investigator);
 alter table launch_investigator add constraint fk_launch_investigator_launch foreign key(li_l_launch_tag) references launch(l_launch_tag);
@@ -1297,6 +1363,8 @@ from
 			when s_DDate = '2019 May  16'  then '2019 May 16'
 			when s_DDate like '%Mar  0' then replace(s_DDate, 'Mar  0', 'Mar')
 			when s_DDate = '2021 Sep  10 0900?' then '2021 Sep 10 0900?'
+			when s_DDate = '2024 Dec 16  1025?' then '2024 Dec 16 1025?'
+			when s_DDate = '2023 Mar 19 0048??' then '2023 Mar 19 0048?'
 			else s_DDate
 		end s_DDate,
 		s_status,
