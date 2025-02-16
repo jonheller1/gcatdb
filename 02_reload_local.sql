@@ -1530,8 +1530,20 @@ end;
 
 --SATELLITE_OWNER_ORG
 create table satellite_owner_org compress as
-select cast("JCAT" as varchar2(100)) soo_s_jcat, rtrim(column_value, '?') soo_o_code
-from satcat_staging
+select
+	cast("JCAT" as varchar2(100)) soo_s_jcat,
+	rtrim(column_value, '?') soo_o_code
+from
+(
+	--Fixes
+	select
+		"JCAT",
+		case
+			when "Owner" = 'NROC/NROC' then 'NROC'
+			else "Owner"
+		end "Owner"
+	from satcat_staging
+)
 cross join gcat_helper.get_nt_from_list("Owner", '/')
 where "Owner" <> '-'
 order by 1,2;
@@ -1540,6 +1552,16 @@ alter table satellite_owner_org add constraint pk_satellite_owner_org primary ke
 alter table satellite_owner_org add constraint fk_satellite_owner_org_organization foreign key(soo_o_code) references organization(o_code);
 --Too many duplicates for foreign key.
 --alter table satellite_owner_org add constraint fk_satellite_owner_org_satellite foreign key(soo_s_jcat) references satellite(s_jcat);
+
+/*
+-- PK_SATELLITE_OWNER_ORG duplicates.
+select soo_s_jcat, soo_o_code, count(*)
+from satellite_owner_org
+group by soo_s_jcat, soo_o_code
+having count(*) >= 2;
+
+select * from satcat_staging where "JCAT" = 'S44230'
+*/
 
 
 --SATELLITE_MANUFACTURER_ORG
@@ -1590,7 +1612,8 @@ select /*+ no_gather_optimizer_statistics */
 	gcat_helper.gcat_to_number(pay_UNPerigee) pay_UNPerigee,
 	gcat_helper.gcat_to_number(pay_UNApogee) pay_UNApogee,
 	gcat_helper.gcat_to_number(pay_UNInc) pay_UNInc,
-	gcat_helper.gcat_to_number(pay_DispEpoch) pay_DispEpoch,
+	gcat_helper.vague_to_date(pay_DispEpoch) pay_DispEpoch,
+	gcat_helper.vague_to_precision(pay_DispEpoch) pay_DispEpoch_precision,
 	gcat_helper.gcat_to_number(pay_DispPeri) pay_DispPeri,
 	gcat_helper.gcat_to_number(pay_DispApo) pay_DispApo,
 	gcat_helper.gcat_to_number(pay_DispInc) pay_DispInc,
@@ -1611,6 +1634,7 @@ from
 		pay_TOp,
 		case
 			when pay_TDate in ('*', '* E') then null
+			when pay_TDate = '2022  Mar 27?' then '2022 Mar 27?'
 			else pay_TDate
 		end pay_TDate,
 		pay_TF,
@@ -1669,13 +1693,13 @@ from
 			gcat_helper.convert_null_and_trim("Comment"   ) pay_Comment
 		from
 		(
-			select 'psatcat'  pay_catalog, psatcat_staging.* from psatcat_staging  union all
-			select 'pauxcat'  pay_catalog, pauxcat_staging.* from pauxcat_staging  union all
-			select 'pftocat'  pay_catalog, pftocat_staging.* from pftocat_staging  union all
-			select 'ptmpcat'  pay_catalog, pftocat_staging.* from ptmpcat_staging  union all
-			select 'plcat'    pay_catalog, plcat_staging.*   from plcat_staging    union all
-			select 'prcat'    pay_catalog, pftocat_staging.* from prcat_staging    union all
-			select 'pdeepcat' pay_catalog, pftocat_staging.* from pdeepcat_staging
+			select 'psatcat'  pay_catalog, psatcat_staging.*  from psatcat_staging  union all
+			select 'pauxcat'  pay_catalog, pauxcat_staging.*  from pauxcat_staging  union all
+			select 'pftocat'  pay_catalog, pftocat_staging.*  from pftocat_staging  union all
+			select 'ptmpcat'  pay_catalog, ptmpcat_staging.*  from ptmpcat_staging  union all
+			select 'plcat'    pay_catalog, plcat_staging.*    from plcat_staging    union all
+			select 'prcat'    pay_catalog, prcat_staging.*    from prcat_staging    union all
+			select 'pdeepcat' pay_catalog, pdeepcat_staging.* from pdeepcat_staging
 		)
 	) rename_columns
 ) fix_data
@@ -1684,21 +1708,21 @@ order by 1,2,3;
 alter table payload add constraint pk_payload primary key(pay_jcat);
 alter table payload add constraint fk_payload_org foreign key (pay_UNState_o_code) references organization(o_code);
 
-
 /*
 --Find which files have invalid dates.
 select *
 from
 (
-	select 'psatcat'  pay_catalog, psatcat_staging.* from psatcat_staging  union all
-	select 'pauxcat'  pay_catalog, pauxcat_staging.* from pauxcat_staging  union all
-	select 'pftocat'  pay_catalog, pftocat_staging.* from pftocat_staging  union all
-	select 'ptmpcat'  pay_catalog, pftocat_staging.* from ptmpcat_staging  union all
-	select 'plcat'    pay_catalog, plcat_staging.*   from plcat_staging    union all
-	select 'prcat'    pay_catalog, pftocat_staging.* from prcat_staging    union all
-	select 'pdeepcat' pay_catalog, pftocat_staging.* from pdeepcat_staging
+	select 'psatcat'  pay_catalog, psatcat_staging.*  from psatcat_staging  union all
+	select 'pauxcat'  pay_catalog, pauxcat_staging.*  from pauxcat_staging  union all
+	select 'pftocat'  pay_catalog, pftocat_staging.*  from pftocat_staging  union all
+	select 'ptmpcat'  pay_catalog, ptmpcat_staging.*  from ptmpcat_staging  union all
+	select 'plcat'    pay_catalog, plcat_staging.*    from plcat_staging    union all
+	select 'prcat'    pay_catalog, prcat_staging.*    from prcat_staging    union all
+	select 'pdeepcat' pay_catalog, pdeepcat_staging.* from pdeepcat_staging
 )
-where "LDate" = '22 Feb 27';
+where "TDate" like  '%2022  Mar 27?%';
+--where "LDate" like  '%2024 Aug 31%';
 */
 
 
@@ -1710,13 +1734,13 @@ select
 	case when column_value like '%*%' then 'Yes' else 'No' end pc_is_secret
 from
 (
-	select 'psatcat'  pay_catalog, psatcat_staging.* from psatcat_staging  union all
-	select 'pauxcat'  pay_catalog, pauxcat_staging.* from pauxcat_staging  union all
-	select 'pftocat'  pay_catalog, pftocat_staging.* from pftocat_staging  union all
-	select 'ptmpcat'  pay_catalog, pftocat_staging.* from ptmpcat_staging  union all
-	select 'plcat'    pay_catalog, plcat_staging.*   from plcat_staging    union all
-	select 'prcat'    pay_catalog, pftocat_staging.* from prcat_staging    union all
-	select 'pdeepcat' pay_catalog, pftocat_staging.* from pdeepcat_staging
+	select 'psatcat'  pay_catalog, psatcat_staging.*  from psatcat_staging  union all
+	select 'pauxcat'  pay_catalog, pauxcat_staging.*  from pauxcat_staging  union all
+	select 'pftocat'  pay_catalog, pftocat_staging.*  from pftocat_staging  union all
+	select 'ptmpcat'  pay_catalog, ptmpcat_staging.*  from ptmpcat_staging  union all
+	select 'plcat'    pay_catalog, plcat_staging.*    from plcat_staging    union all
+	select 'prcat'    pay_catalog, prcat_staging.*    from prcat_staging    union all
+	select 'pdeepcat' pay_catalog, pdeepcat_staging.* from pdeepcat_staging
 )
 cross join gcat_helper.get_nt_from_list(rtrim("Category", '?'), '/')
 where "Category" <> '-'
@@ -1733,13 +1757,13 @@ select
 	replace(replace(column_value, '?'), '*') pd_discipline
 from
 (
-	select 'psatcat'  pay_catalog, psatcat_staging.* from psatcat_staging  union all
-	select 'pauxcat'  pay_catalog, pauxcat_staging.* from pauxcat_staging  union all
-	select 'pftocat'  pay_catalog, pftocat_staging.* from pftocat_staging  union all
-	select 'ptmpcat'  pay_catalog, pftocat_staging.* from ptmpcat_staging  union all
-	select 'plcat'    pay_catalog, plcat_staging.*   from plcat_staging    union all
-	select 'prcat'    pay_catalog, pftocat_staging.* from prcat_staging    union all
-	select 'pdeepcat' pay_catalog, pftocat_staging.* from pdeepcat_staging
+	select 'psatcat'  pay_catalog, psatcat_staging.*  from psatcat_staging  union all
+	select 'pauxcat'  pay_catalog, pauxcat_staging.*  from pauxcat_staging  union all
+	select 'pftocat'  pay_catalog, pftocat_staging.*  from pftocat_staging  union all
+	select 'ptmpcat'  pay_catalog, ptmpcat_staging.*  from ptmpcat_staging  union all
+	select 'plcat'    pay_catalog, plcat_staging.*    from plcat_staging    union all
+	select 'prcat'    pay_catalog, prcat_staging.*    from prcat_staging    union all
+	select 'pdeepcat' pay_catalog, pdeepcat_staging.* from pdeepcat_staging
 )
 cross join gcat_helper.get_nt_from_list(rtrim("Discipline", '?'), '/')
 where "Discipline" <> '-'
@@ -1851,11 +1875,14 @@ from
 (
 	select
 		em_e_id,
-		replace(replace(replace(replace(
+		replace(replace(replace(replace(replace(replace(
 			column_value, '?'),
+			--Fix:
 			'Zulfiqar', 'IRGC'),
 			'TKSVA', 'OKB52'),
-			'IRCPS', 'NGISP'
+			'IRCPS', 'NGISP'),
+			'IRAN', 'IR'),
+			'SNC', 'SIENV'
 		) em_manufacturer_o_code
 	from
 	(
@@ -1871,7 +1898,7 @@ alter table engine_manufacturer add constraint fk_engine_manufacturer_engine for
 alter table engine_manufacturer add constraint fk_engine_manufacturer_organization foreign key (em_manufacturer_o_code) references organization(o_code);
 
 /*
---Check for bad organization codes.
+--FK_ENGINE_MANUFACTURER_ORGANIZATION - Check for bad organization codes.
 select *
 from engine_manufacturer
 left join organization
@@ -1881,6 +1908,7 @@ order by 1;
 */
 
 
+drop table stage;
 --STAGE
 create table stage compress nologging as
 select
@@ -1899,6 +1927,7 @@ from
 (
 	--Rename columns.
 	select
+		"Stage_Name",
 		gcat_helper.convert_null_and_trim("Stage_Name"    ) Stage_Name,
 		gcat_helper.convert_null_and_trim("Stage_Family"  ) Stage_LVF_Family,
 		gcat_helper.convert_null_and_trim("Stage_Alt_Name") Stage_Alt_Name,
@@ -1913,40 +1942,8 @@ from
 	from stages_staging
 	left join engine
 		on stages_staging."Engine" = engine.e_name
-	--Manually adjust some joins, based on names.
-	--When it's still ambiguous, choose the engine with either more complete values, or more precise-looking numbers, or later values.
-	where not
-	(
-		("Stage_Name" = '11S86'           and e_usage = 'Blok DM') or
-		("Stage_Name" = '11S861'          and e_usage = 'Blok D-1') or
-		("Stage_Name" = '11S861-01'       and e_usage = 'Blok D-1') or
-		("Stage_Name" = '11S861-03'       and e_usage = 'Blok D-1') or
-		("Stage_Name" = '17S40'           and e_usage = 'Blok DM') or
-		("Stage_Name" = '14S48'           and e_usage = 'Blok DM') or
-		("Stage_Name" = 'Blok DM1'        and e_usage = 'Blok D-1') or
-		("Stage_Name" = 'Blok DM3'        and e_usage = 'Blok D-1') or
-		("Stage_Name" = 'Blok DM4'        and e_usage = 'Blok D-1') or
-		("Stage_Name" = 'Blok DM-SL'      and e_usage = 'Blok D-1') or
-		("Stage_Name" = 'Blok DM-SLB'     and e_usage = 'Blok D-1') or
-		("Stage_Name" = 'Dragon V2'       and e_usage = 'Dragon') or
-		("Stage_Name" = 'FB-1 Stage 2'    and e_usage = 'CZ-2 St2 vernier x4') or
-		("Stage_Name" = 'CZ-4 Stage 3'    and e_usage = 'CZ-4B (3)') or
-		("Stage_Name" = 'CZ-4B Stage 3'   and e_usage = 'CZ-4B (3)') or
-		("Stage_Name" = 'RT-23 St 3'      and e_usage is null) or
-		("Stage_Name" = 'M-34'            and e_usage = 'M-V [3]') or
-		("Stage_Name" = 'GEM-60'          and e_date = date '2002-11-20') or
-		("Stage_Name" = 'Star 48B'        and e_usage = 'STS PAM-D') or
-		("Stage_Name" = 'Star 48B AKM'    and e_usage = 'STS PAM-D') or
-		("Stage_Name" = 'H-II SSB'        and e_date is null) or
-		("Stage_Name" = 'Taurion'         and e_date is null) or
-		("Stage_Name" = 'Improved Orion'  and e_date is null) or
-		("Stage_Name" = 'Hydac'           and e_alt_name = 'H-28') or
-		("Stage_Name" = 'SDC Viper'       and e_alt_name is null) or
-		("Stage_Name" = 'Arcas'           and e_date is null) or
-		("Stage_Name" = 'Frangible Arcas' and e_impulse is null)
-	)
-	--Exclude a row with no name.
-	and "Stage_Name" <> '-'
+	--Exclude the "Dummy" stages with no real values.
+	where "Stage_Name" not in ('-', '?')
 ) rename_columns
 order by 1,2,3;
 
@@ -1956,6 +1953,7 @@ alter table stage add constraint fk_stage_launch_vehicle_family foreign key (sta
 alter table stage add constraint fk_stage_engine foreign key (stage_e_id) references engine(e_id);
 
 
+drop table stage_manufacturer;
 --STAGE_MANUFACTURER
 create table stage_manufacturer compress as
 select cast(sm_stage_name as varchar2(1000)) sm_stage_name, sm_manufacturer_o_code
@@ -1967,7 +1965,13 @@ from
 	(
 		select
 			"Stage_Name" sm_stage_name,
-			replace("Stage_Manufacturer", 'NCSIST', '') "Stage_Manufacturer" --TODO: Missing data from orgs.tsv?
+			--Fix:
+			replace(replace(replace(replace("Stage_Manufacturer"
+				, 'NCSIST', '')
+				, 'ULA', 'ULAB')
+				, 'SALT', 'SAST')
+				, 'ARMT   -', 'ARMT'
+			) "Stage_Manufacturer" --TODO: Missing data from orgs.tsv?
 		from stages_staging
 		where "Stage_Name" not in ('-', '?')
 			and "Stage_Manufacturer" <> '-'
@@ -2125,173 +2129,6 @@ begin
 			end if;
 		end loop;
 	end loop;
-end;
-/
-
-
-
-
---------------------------------------------------------------------------------
--- Recreate OCI database and public access.
---------------------------------------------------------------------------------
-
---Drop cloud users.
-declare
-	v_user_does_not_exist exception;
-	pragma exception_init(v_user_does_not_exist, -1918);
-	v_profile_does_not_exist exception;
-	pragma exception_init(v_profile_does_not_exist, -2380);
-begin
-	begin
-		dbms_utility.exec_ddl_statement@gcat('drop user gcat cascade');
-	exception when v_user_does_not_exist then null;
-	end;
-
-	begin
-		dbms_utility.exec_ddl_statement@gcat('drop user gcat_public cascade');
-	exception when v_user_does_not_exist then null;
-	end;
-
-	begin
-		dbms_utility.exec_ddl_statement@gcat('drop profile gcat_public_profile');
-	exception when v_profile_does_not_exist then null;
-	end;
-
-	dbms_utility.exec_ddl_statement@gcat(q'[ begin ords_admin.drop_rest_for_schema(p_schema => 'GCAT_PUBLIC'); end; ]');
-end;
-/
-
-
---Create user that will only hold the data.
-begin
-	dbms_utility.exec_ddl_statement@gcat('create user gcat no authentication quota unlimited on data default tablespace data');
-end;
-/
-
-
---Create a profile that won't lock or expire, and won't allow more
---than 10 seconds of CPU per statement. (These small tables shouldn't require much time.)
--- (It would be nice to allow simple password but ATP simply doesn't allow it.)
-begin
-	dbms_utility.exec_ddl_statement@gcat('
-		create profile gcat_public_profile limit
-		password_verify_function null
-		failed_login_attempts unlimited
-		password_life_time unlimited
-		cpu_per_call 10000
-	');
-end;
-/
-
-
---Create a public user to access GCAT data.
---(This read-only password is psuedo-public knowledge.)
-begin
-	dbms_utility.exec_ddl_statement@gcat('create user gcat_public identified by public_gcat#1A profile gcat_public_profile quota 1M on data');
-	dbms_utility.exec_ddl_statement@gcat('grant create session to gcat_public');
-end;
-/
-
-
---Create a simple table that will appear on the initial login, for users who didn't read anything else.
-begin
-	dbms_utility.exec_ddl_statement@gcat(
-	q'[
-		create table gcat_public.readme as
-		select 'This is a database and query tool built on top of Jonathan C. McDowell''s GCAT: General Catalog of Artificial Space Objects.
-		To understand the data you should first read his website: https://planet4589.org/space/gcat/index.html
-		
-		The database code was created by Jon Heller.
-		(TODO - See GitHub link?)
-		Questions about how to query the data can be sent to me at jon@jonheller.org
-		' readme from dual
-	]');
-end;
-/
-
-
---Prevent user from altering objects or modifying data.
-begin
-	dbms_utility.exec_ddl_statement@gcat(
-	q'[
-		create or replace trigger prevent_user_from_altering_objects
-		before ddl on gcat_public.schema
-		begin
-			raise_application_error(-20000, 'Please do not try to alter any objects on this system.');
-		end;
-	]');
-
-	dbms_utility.exec_ddl_statement@gcat(
-	q'[
-		create or replace trigger prevent_user_from_modifying_data
-		before insert or update or delete on gcat_public.readme
-		begin
-			raise_application_error(-20000, 'Please do not try to modify the data on this system.');
-		end;
-	]');
-end;
-/
-
-
---Prevent public user from changing the public password.
-/*
-This command:
-	alter user gcat_public identified by "someNewPW#1234" replace "public_gcat#1A";
-Will now throw this error:
-	ORA-04088: error during execution of trigger 'ADMIN.CANNOT_CHANGE_PASSWORD_TR' ORA-00604: error occurred at recursive SQL level 1 ORA-20010: you cannot change your own password. ORA-06512: at line 5
-*/
-begin
-	dbms_utility.exec_ddl_statement@gcat(
-	q'[
-		create or replace trigger cannot_change_password_tr
-		before alter
-		on database
-		declare
-		begin
-			--From: http://www.petefinnigan.com/weblog/archives/00001198.htm
-			if (ora_dict_obj_type = 'USER' and user = 'GCAT_PUBLIC') then
-				raise_application_error(-20010,'you cannot change your own password.');
-			end if;
-		end;
-	]');
-end;
-/
-
-
---Enable SQL Developer Web access.
---(To rollback: ords_admin.drop_rest_for_schema(p_schema => 'GCAT_PUBLIC');
-begin
-	dbms_utility.exec_ddl_statement@gcat(
-	q'[
-		create or replace procedure enable_rest authid current_user is
-		begin
-			execute immediate
-			q'!
-				begin
-					ords_admin.enable_schema(
-						p_enabled             => true,
-						p_schema              => 'GCAT_PUBLIC',
-						p_url_mapping_type    => 'BASE_PATH',
-						p_url_mapping_pattern => 'GCAT_PUBLIC',
-						p_auto_rest_auth      => true
-					);
-					commit;
-				end;
-			!';
-		end;
-	]');
-
-	execute immediate
-	q'[
-		begin
-			enable_rest@gcat;
-		end;
-	]';
-
-	dbms_utility.exec_ddl_statement@gcat(
-	q'[
-		drop procedure enable_rest
-	]');
 end;
 /
 
