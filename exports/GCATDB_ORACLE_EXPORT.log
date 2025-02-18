@@ -1,0 +1,48 @@
+;;; 
+Import: Release 19.0.0.0.0 - Production on Mon Feb 17 23:13:52 2025
+Version 19.3.0.0.0
+
+Copyright (c) 1982, 2019, Oracle and/or its affiliates.  All rights reserved.
+;;; 
+Connected to: Oracle Database 19c Enterprise Edition Release 19.0.0.0.0 - Production
+Master table "GCAT_TEST"."SYS_IMPORT_FULL_01" successfully loaded/unloaded
+Starting "GCAT_TEST"."SYS_IMPORT_FULL_01":  gcat_test/********@orclpdb directory=gcatdb_export dumpfile=GCATDB_ORACLE.dmp REMAP_SCHEMA=jheller:gcat_test logfile=GCATDB_ORACLE_EXPORT.log 
+Processing object type TABLE_EXPORT/TABLE/TABLE
+Processing object type TABLE_EXPORT/TABLE/TABLE_DATA
+. . imported "GCAT_TEST"."SATELLITE"                     6.836 MB  267778 rows
+. . imported "GCAT_TEST"."LAUNCH"                        1.970 MB   74973 rows
+. . imported "GCAT_TEST"."PAYLOAD"                       652.9 KB   24738 rows
+. . imported "GCAT_TEST"."LAUNCH_AGENCY_ORG"             163.8 KB   76903 rows
+. . imported "GCAT_TEST"."SATELLITE_OWNER_ORG"           122.2 KB   64524 rows
+. . imported "GCAT_TEST"."ORGANIZATION"                  221.9 KB    3825 rows
+. . imported "GCAT_TEST"."SATELLITE_MANUFACTURER_ORG"    93.21 KB   40214 rows
+. . imported "GCAT_TEST"."PAYLOAD_CATEGORY"              52.92 KB   25145 rows
+. . imported "GCAT_TEST"."LAUNCH_POINT"                  62.09 KB    2777 rows
+. . imported "GCAT_TEST"."LAUNCH_INVESTIGATOR"           51.82 KB   11772 rows
+. . imported "GCAT_TEST"."LAUNCH_VEHICLE_STAGE"          43.73 KB    4610 rows
+. . imported "GCAT_TEST"."SITE"                          40.07 KB     699 rows
+. . imported "GCAT_TEST"."ENGINE"                        38.35 KB    1430 rows
+. . imported "GCAT_TEST"."LAUNCH_VEHICLE"                31.87 KB    1777 rows
+. . imported "GCAT_TEST"."REFERENCE"                     41.21 KB    3052 rows
+. . imported "GCAT_TEST"."STAGE"                         33.83 KB    1551 rows
+. . imported "GCAT_TEST"."PLATFORM"                      19.10 KB     382 rows
+. . imported "GCAT_TEST"."WORLD"                         22.63 KB     286 rows
+. . imported "GCAT_TEST"."ORGANIZATION_ORG_TYPE"         21.77 KB    5622 rows
+. . imported "GCAT_TEST"."LAUNCH_POINT_ORG"              14.07 KB    2723 rows
+. . imported "GCAT_TEST"."ENGINE_PROPELLANT"             9.812 KB    2076 rows
+. . imported "GCAT_TEST"."LAUNCH_VEHICLE_ORG"            16.53 KB    1868 rows
+. . imported "GCAT_TEST"."PAYLOAD_DISCIPLINE"            11.39 KB    2374 rows
+. . imported "GCAT_TEST"."STAGE_MANUFACTURER"            14.37 KB    1566 rows
+. . imported "GCAT_TEST"."ENGINE_MANUFACTURER"           9.992 KB    1481 rows
+. . imported "GCAT_TEST"."SITE_ORG"                      8.265 KB     710 rows
+. . imported "GCAT_TEST"."PLATFORM_ORG"                  6.476 KB     384 rows
+. . imported "GCAT_TEST"."LAUNCH_VEHICLE_FAMILY"         7.664 KB     657 rows
+. . imported "GCAT_TEST"."ORGANIZATION_TYPE"             5.523 KB      17 rows
+. . imported "GCAT_TEST"."LAUNCH_PAYLOAD_ORG"            4.835 KB       3 rows
+Processing object type TABLE_EXPORT/TABLE/INDEX/INDEX
+Processing object type TABLE_EXPORT/TABLE/CONSTRAINT/CONSTRAINT
+Processing object type TABLE_EXPORT/TABLE/INDEX/STATISTICS/INDEX_STATISTICS
+Processing object type TABLE_EXPORT/TABLE/CONSTRAINT/REF_CONSTRAINT
+Processing object type TABLE_EXPORT/TABLE/STATISTICS/TABLE_STATISTICS
+Processing object type TABLE_EXPORT/TABLE/STATISTICS/MARKER
+Job "GCAT_TEST"."SYS_IMPORT_FULL_01" successfully completed at Mon Feb 17 23:14:25 2025 elapsed 0 00:00:33

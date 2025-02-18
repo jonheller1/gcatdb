@@ -1,0 +1,240 @@
+--------------------------------------------------------------------------------
+-- Create Oracle Cloud Infrastructure (OCI) database - one time step
+--------------------------------------------------------------------------------
+
+Create Oracle Cloud account.
+
+Open this link to see the login screen: https://cloud.oracle.com/db/adb
+
+Choose oracleidentitycloudservice and click Continue to enter password.
+
+Enter Username and Password to continue to Autonomous Database.
+
+Click "Create Autonomous Database"
+
+Change "Display name" and "Database name" to "gcat"
+
+Keep the free options
+
+Set database version to 21c (19c was tested and also works)
+
+Create and write down new password for "Create administrator credentials"
+
+Keep the default connection options
+
+Enter Contact Email
+
+Click "Create Autonomous Database"
+
+Wait about a minute for the database to provision and status to change to "Available"
+
+Click on "DB Connection" to setup local connections
+
+Change Wallet type from "Instance Wallet" to "Regional Wallet", so you will get metadata for all relevant instances.
+
+Create and write down new password for the wallet, click "Download" and save the file.
+
+Find the directory of your tnsnames.ora file by running this on your local command line:
+	tnsping anything
+
+Create a subdirectory named "gcatwallet" and copy the files from the downloaded ZIP file into that directory.
+
+In that new subdirectory, open the tnsnames.ora file and copy the new gcat entries and paste them into your normal tnsnames.ora file.
+
+Open your sqlnet.ora file and add a WALLET_LOCATION like this that refers to your new wallet subdirectory.
+	WALLET_LOCATION = (SOURCE = (METHOD = file) (METHOD_DATA = (DIRECTORY="D:\19c\WINDOWS.X64_193000_db_home\network\admin\gcatwallet")))
+
+You should be able to ping the new database from your local command line like this:
+	tnsping gcat_low
+
+You should be able to login to the new database like this:
+	sqlplus ADMIN/(admin password from above)@gcat_low
+
+(TODO: Create separate user for link, not ADMIN)
+Create database link from local machine to GCAT admin:
+	create database link gcat connect to admin identified by "<password from above>" using 'gcat_low';
+
+Test database link:
+	select * from dual@gcat;
+
+Create a database job that will ping the remote database to keep it alive. (Unused databases are stopped after seven days, and eventually terminated.)
+	begin
+		dbms_scheduler.create_job
+		(
+			job_name        => 'ping_gcat_oci_database_to_keep_it_running',
+			job_type        => 'PLSQL_BLOCK',
+			job_action      => 'declare v_dummy varchar2(1); begin select dummy into v_dummy from dual@gcat; end;',
+			start_date      => systimestamp,
+			repeat_interval => 'freq=daily;',
+			enabled         => true
+		);
+	end;
+/
+
+Configuration is complete!
+/
+
+
+--------------------------------------------------------------------------------
+-- Recreate OCI database and public access.
+--------------------------------------------------------------------------------
+
+--Drop cloud users.
+declare
+	v_user_does_not_exist exception;
+	pragma exception_init(v_user_does_not_exist, -1918);
+	v_profile_does_not_exist exception;
+	pragma exception_init(v_profile_does_not_exist, -2380);
+begin
+	begin
+		dbms_utility.exec_ddl_statement@gcat('drop user gcat cascade');
+	exception when v_user_does_not_exist then null;
+	end;
+
+	begin
+		dbms_utility.exec_ddl_statement@gcat('drop user gcat_public cascade');
+	exception when v_user_does_not_exist then null;
+	end;
+
+	begin
+		dbms_utility.exec_ddl_statement@gcat('drop profile gcat_public_profile');
+	exception when v_profile_does_not_exist then null;
+	end;
+
+	dbms_utility.exec_ddl_statement@gcat(q'[ begin ords_admin.drop_rest_for_schema(p_schema => 'GCAT_PUBLIC'); end; ]');
+end;
+/
+
+
+--Create user that will only hold the data.
+begin
+	dbms_utility.exec_ddl_statement@gcat('create user gcat no authentication quota unlimited on data default tablespace data');
+end;
+/
+
+
+--Create a profile that won't lock or expire, and won't allow more
+--than 10 seconds of CPU per statement. (These small tables shouldn't require much time.)
+-- (It would be nice to allow simple password but ATP simply doesn't allow it.)
+begin
+	dbms_utility.exec_ddl_statement@gcat('
+		create profile gcat_public_profile limit
+		password_verify_function null
+		failed_login_attempts unlimited
+		password_life_time unlimited
+		cpu_per_call 10000
+	');
+end;
+/
+
+
+--Create a public user to access GCAT data.
+--(This read-only password is psuedo-public knowledge.)
+begin
+	dbms_utility.exec_ddl_statement@gcat('create user gcat_public identified by public_gcat#1A profile gcat_public_profile quota 1M on data');
+	dbms_utility.exec_ddl_statement@gcat('grant create session to gcat_public');
+end;
+/
+
+
+--Create a simple table that will appear on the initial login, for users who didn't read anything else.
+begin
+	dbms_utility.exec_ddl_statement@gcat(
+	q'[
+		create table gcat_public.readme as
+		select 'This is a database and query tool built on top of Jonathan C. McDowell''s GCAT: General Catalog of Artificial Space Objects.
+		To understand the data you should first read his website: https://planet4589.org/space/gcat/index.html
+
+		The database code was created by Jon Heller.
+		(TODO - See GitHub link?)
+		Questions about how to query the data can be sent to me at jon@jonheller.org
+		' readme from dual
+	]');
+end;
+/
+
+
+--Prevent user from altering objects or modifying data.
+begin
+	dbms_utility.exec_ddl_statement@gcat(
+	q'[
+		create or replace trigger prevent_user_from_altering_objects
+		before ddl on gcat_public.schema
+		begin
+			raise_application_error(-20000, 'Please do not try to alter any objects on this system.');
+		end;
+	]');
+
+	dbms_utility.exec_ddl_statement@gcat(
+	q'[
+		create or replace trigger prevent_user_from_modifying_data
+		before insert or update or delete on gcat_public.readme
+		begin
+			raise_application_error(-20000, 'Please do not try to modify the data on this system.');
+		end;
+	]');
+end;
+/
+
+
+--Prevent public user from changing the public password.
+/*
+This command:
+	alter user gcat_public identified by "someNewPW#1234" replace "public_gcat#1A";
+Will now throw this error:
+	ORA-04088: error during execution of trigger 'ADMIN.CANNOT_CHANGE_PASSWORD_TR' ORA-00604: error occurred at recursive SQL level 1 ORA-20010: you cannot change your own password. ORA-06512: at line 5
+*/
+begin
+	dbms_utility.exec_ddl_statement@gcat(
+	q'[
+		create or replace trigger cannot_change_password_tr
+		before alter
+		on database
+		declare
+		begin
+			--From: http://www.petefinnigan.com/weblog/archives/00001198.htm
+			if (ora_dict_obj_type = 'USER' and user = 'GCAT_PUBLIC') then
+				raise_application_error(-20010,'you cannot change your own password.');
+			end if;
+		end;
+	]');
+end;
+/
+
+
+--Enable SQL Developer Web access.
+--(To rollback: ords_admin.drop_rest_for_schema(p_schema => 'GCAT_PUBLIC');
+begin
+	dbms_utility.exec_ddl_statement@gcat(
+	q'[
+		create or replace procedure enable_rest authid current_user is
+		begin
+			execute immediate
+			q'!
+				begin
+					ords_admin.enable_schema(
+						p_enabled             => true,
+						p_schema              => 'GCAT_PUBLIC',
+						p_url_mapping_type    => 'BASE_PATH',
+						p_url_mapping_pattern => 'GCAT_PUBLIC',
+						p_auto_rest_auth      => true
+					);
+					commit;
+				end;
+			!';
+		end;
+	]');
+
+	execute immediate
+	q'[
+		begin
+			enable_rest@gcat;
+		end;
+	]';
+
+	dbms_utility.exec_ddl_statement@gcat(
+	q'[
+		drop procedure enable_rest
+	]');
+end;
+/

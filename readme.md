@@ -13,7 +13,12 @@ TODO. I plan to build an online query capability.
 
 How to import the data into your local database
 -----------------------------------------------
-TODO. I plan to have database exports in multiple formats.
+For Oracle:
+1. Find an available Oracle and filesystem directory. For example, most Oracle database have a directory named `DATA_PUMP_DIR`, and you can find the directory path with this SQL: `select directory_path from all_directories where directory_name = 'DATA_PUMP_DIR';`
+2. Download the file [exports/GCATDB_ORACLE.dmp](exports/GCATDB_ORACLE.dmp) into the above directory.
+3. Run this command to import the dump file: `impdp your_username/your_password/@your_database directory=data_pump_dir dumpfile=GCATDB_ORACLE.dmp REMAP_SCHEMA=jheller:your_username logfile=GCATDB_ORACLE_EXPORT.log`
+
+TODO - I plan to support other database formats in the future.
 
 
 
@@ -39,7 +44,7 @@ Database schemas work better when the columns are dumb but the schema is smart. 
 
 1. **No concatenated values.** Concatenateds value are broken into multiple columns. For example, instead of storing the Launch Date in the vague date format as the string "1943 Nov 25 0100?", the schema stores the date in a `DATE` column named `L_LAUNCH_DATE` and stores the precision value of 'Minutes' in a separate `VARCHAR2` column named `L_LAUNCH_DATE_PRECISION`.
 2. **No lists of values.** Lists of values are broken into a multiple rows in a linked table. A value like 'US/EU' will be stored as two rows in a child table that references the row in the parent table.
-7. **Hungarian notation.** Each column name is prefixed with a simple abbreviation for the table name. And columns with referential integrity will use that precise column name as a suffix, to make it clear what table and column is being referred to. For example, the organization code is stored as `ORGANIZATION.O_CODE`. The organization table also has a parent code, named `ORGANIZATION.O_PARENT_O_CODE.`
+3. **Hungarian notation.** Each column name is prefixed with a simple abbreviation for the table name. And columns with referential integrity will use that precise column name as a suffix, to make it clear what table and column is being referred to. For example, the organization code is stored as `ORGANIZATION.O_CODE`. The organization table also has a parent code, named `ORGANIZATION.O_PARENT_O_CODE.`
 
 These changes make it harder to view the data, but they make it much easier to query and filter the data and they make it more obvious when the columns are joined incorrectly.
 
