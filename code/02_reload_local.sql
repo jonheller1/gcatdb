@@ -217,9 +217,7 @@ end;
 --------------------------------------------------------------------------------
 -- Drop the presentation tables.
 --------------------------------------------------------------------------------
-
 declare
-
 	procedure drop_if_exists(p_object_name varchar2, p_object_type varchar2) is
 		v_table_view_does_not_exist exception;
 		pragma exception_init(v_table_view_does_not_exist, -942);
@@ -1244,6 +1242,7 @@ select /*+ no_gather_optimizer_statistics */
 	s_catalog,
 	s_jcat,
 	s_satcat,
+	s_l_launch_tag,
 	s_piece,
 	s_type_byte_1,
 	s_type_byte_2,
@@ -1315,6 +1314,18 @@ from
 		s_catalog,
 		s_jcat,
 		s_satcat,
+		--Fix:
+		case
+			when s_l_launch_tag = '-          -' then null
+			when s_l_launch_tag = '-          UNK' then null
+			--Remove some repeating dates(?) at the end of the strings.
+			when regexp_like(s_l_launch_tag, '-[[:space:]]+(194|195|196|197|198|199|200|201|202)$') then
+				null
+			when regexp_like(s_l_launch_tag, '[[:space:]]+(194|195|196|197|198|199|200|201|202)$') then
+				regexp_replace(s_l_launch_tag, '[[:space:]]+(194|195|196|197|198|199|200|201|202)$')
+			else
+				s_l_launch_tag
+		end s_l_launch_tag,
 		s_piece,
 		s_type_byte_1,
 		s_type_byte_2,
@@ -1408,6 +1419,7 @@ from
 			s_catalog,
 			gcat_helper.convert_null_and_trim(sat_files."JCAT"    ) s_jcat,
 			gcat_helper.convert_null_and_trim("Satcat"            ) s_satcat,
+			gcat_helper.convert_null_and_trim("Launch_Tag"        ) s_l_launch_tag,
 			gcat_helper.convert_null_and_trim("Piece"             ) s_piece,
 			gcat_helper.convert_null_and_trim(substr("Type", 1, 1)) s_type_byte_1,
 			gcat_helper.convert_null_and_trim(substr("Type", 2, 1)) s_type_byte_2,
@@ -1475,6 +1487,7 @@ from
 order by 1,2,3;
 
 alter table satellite add constraint fk_satellite_state_org foreign key (s_state_o_code) references organization(o_code);
+alter table satellite add constraint fk_satellite_launch foreign key (s_l_launch_tag) references launch(l_launch_tag);
 --Too many duplicates. No good primary key for this table?
 --alter table satellite add constraint pk_satellite primary key(s_jcat);
 create index satellite_idx1 on satellite(s_jcat);
@@ -1498,6 +1511,14 @@ from
 	select 'tmpcat'  s_catalog, tmpcat_staging.*  from tmpcat_staging
 )
 where "ODate" = '2021 Fen 14';
+
+--FK_SATELLITE_LAUNCH
+select *
+from satellite
+left join launch
+	on s_l_launch_tag = l_launch_tag
+where l_launch_tag is null
+	and s_l_launch_tag is not null;
 */
 
 --Ensure all parents exist.
@@ -1774,6 +1795,7 @@ alter table payload_discipline add constraint fk_payload_discipline_payload fore
 
 
 --ENGINE
+--TODO: Use E_NAME as PK instead of E_ID?
 create table engine compress nologging as
 select
 	e_ID,
@@ -1908,7 +1930,6 @@ order by 1;
 */
 
 
-drop table stage;
 --STAGE
 create table stage compress nologging as
 select
@@ -1953,7 +1974,6 @@ alter table stage add constraint fk_stage_launch_vehicle_family foreign key (sta
 alter table stage add constraint fk_stage_engine foreign key (stage_e_id) references engine(e_id);
 
 
-drop table stage_manufacturer;
 --STAGE_MANUFACTURER
 create table stage_manufacturer compress as
 select cast(sm_stage_name as varchar2(1000)) sm_stage_name, sm_manufacturer_o_code
@@ -2256,7 +2276,7 @@ order by 1, 2;
 drop user gcat_test cascade;
 create user gcat_test identified by gcat_test quota unlimited on users;
 grant create session, resource to gcat_test;
-grant read,write on directory data_pump_dir to gcat_test;
+grant read,write on directory gcatdb_export to gcat_test;
 
 -- Import from command line:
 impdp gcat_test/gcat_test@orclpdb directory=gcatdb_export dumpfile=GCATDB_ORACLE.dmp REMAP_SCHEMA=jheller:gcat_test logfile=GCATDB_ORACLE_EXPORT.log

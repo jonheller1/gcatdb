@@ -375,7 +375,8 @@ create or replace package body gcat_helper is
 	begin
 		if substr(p_launch_code, 1, 1) in ('D', 'O', 'X') then
 			return 1;
-		elsif substr(p_launch_code, 1, 1) in ('A', 'H', 'M', 'R', 'S', 'T', 'Y') then
+		-- I think that "!" is for "fake" launches, like debris and duplicates.
+		elsif substr(p_launch_code, 1, 1) in ('A', 'H', 'M', 'R', 'S', 'T', 'Y', '!') then
 			return 0;
 		else
 			raise_application_error(-20001, 'Cannot determine if launch code "'||p_launch_code||'" is orbital or not.');
