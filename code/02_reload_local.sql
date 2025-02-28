@@ -91,7 +91,7 @@ end;
 
 
 --------------------------------------------------------------------------------
--- Create staging tables.
+-- Drop and recreate staging tables.
 -- Takes about 5 minutes for all tables.
 --------------------------------------------------------------------------------
 
@@ -674,8 +674,7 @@ select
 	cast(gcat_helper.convert_null_and_trim("LV_Name"   ) as varchar2(1000)) lvo_lv_name,
 	cast(gcat_helper.convert_null_and_trim("LV_Variant") as varchar2(1000)) lvo_lv_variant,
 	--FIXES:
-	replace(replace(replace(replace(replace(column_value, '?'),
-		'SKYRO','SKYR'),
+	replace(replace(replace(replace(column_value, '?'),
 		'ROKTSN','ROKSN'),
 		'TIAB', 'TIANB'),
 		'NCSIST','') --TODO: Missing data from orgs.tsv?
@@ -808,8 +807,6 @@ from
 		case
 			when l_ascent_site_lp_site_code = 'KMR' and l_ascent_pad_lp_code = 'Lp1' then 'LP1'
 			when l_ascent_site_lp_site_code = 'A51' and l_ascent_pad_lp_code = 'X' then 'X1'
-			when l_launch_tag in ('1964-A158', '1964-A172', '1964-A170') and l_ascent_pad_lp_code in ('A', 'A?') then 'ROS A'
-			when l_launch_tag in ('1968-A58') and l_ascent_pad_lp_code in ('B') then 'ROS B'
 			else rtrim(l_ascent_pad_lp_code, '?')
 		end l_ascent_pad_lp_code,
 		l_apogee,
@@ -1376,6 +1373,7 @@ from
 			when s_DDate = '2021 Sep  10 0900?' then '2021 Sep 10 0900?'
 			when s_DDate = '2024 Dec 16  1025?' then '2024 Dec 16 1025?'
 			when s_DDate = '2023 Mar 19 0048??' then '2023 Mar 19 0048?'
+			when s_DDate = '2025 JFeb 25 0356' then '2025 Feb 25 0356'
 			else s_DDate
 		end s_DDate,
 		s_status,

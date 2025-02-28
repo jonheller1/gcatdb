@@ -18,7 +18,7 @@ For Oracle:
 2. Download the file [exports/GCATDB_ORACLE.dmp](exports/GCATDB_ORACLE.dmp) into the above directory.
 3. Run this command to import the dump file: `impdp your_username/your_password/@your_database directory=data_pump_dir dumpfile=GCATDB_ORACLE.dmp REMAP_SCHEMA=jheller:your_username logfile=GCATDB_ORACLE_EXPORT.log`
 
-TODO - I plan to support other database formats in the future.
+TODO - I plan to support other database formats in the future. For example, CSV files with import instructions for PostgreSQL.
 
 
 
