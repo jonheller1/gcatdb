@@ -1,7 +1,7 @@
 GCATDB
 ======================================
 
-(EXPERIMENTAL - DO NOT USE YET) A relational schema built out of Jonathan McDowell's [General Catalog of Artificial Space Objects.](https://planet4589.org/space/gcat/) (This project is not affiliated with Jonathan McDowell.)
+(UNSTABLE ALPHA VERSION - The data should be accurate, but table and columns names may unexpectedly change in the future.) A relational schema built out of Jonathan McDowell's [General Catalog of Artificial Space Objects.](https://planet4589.org/space/gcat/) (This project is not affiliated with Jonathan McDowell.)
 
 
 
@@ -13,11 +13,15 @@ TODO. I plan to build an online query capability.
 
 How to import the data into your local database
 -----------------------------------------------
-For Oracle:
+*Oracle - Datapump import - easiest if you have access to the server file system:*
 1. Find an available Oracle and filesystem directory. For example, most Oracle database have a directory named `DATA_PUMP_DIR`, and you can find the directory path with this SQL: `select directory_path from all_directories where directory_name = 'DATA_PUMP_DIR';`
 2. Download the file [exports/GCATDB_ORACLE.dmp](exports/GCATDB_ORACLE.dmp) into the above directory.
 3. Run this command to import the dump file: `impdp your_username/your_password/@your_database directory=data_pump_dir dumpfile=GCATDB_ORACLE.dmp REMAP_SCHEMA=jheller:your_username logfile=GCATDB_ORACLE_EXPORT.log`
 
+*Oracle - SQL files - easiest if you do not have access to the server file system:*
+TODO
+
+*Other*
 TODO - I plan to support other database formats in the future. For example, CSV files with import instructions for PostgreSQL.
 
 
@@ -33,8 +37,8 @@ This is much less convenient than the export files, but if you want to replace m
 How to recreate GCATDB on OCI
 -----------------------------
 TODO, but these are guides that I've used in the past.
-03_setup_oci.txt
-04_reload_oci.sql
+* 03_setup_oci.txt
+* 04_reload_oci.sql
 
 
 
