@@ -29,16 +29,16 @@ TODO - I plan to support other database formats in the future. For example, CSV 
 How to reload GCATDB from scratch on your local system
 ------------------------------------------------------
 This is much less convenient than the export files, but if you want to replace my ELT process, use these files:
-* 01_setup_local.sql
-* 02_reload_local.sql
+* code/01_setup_local.sql
+* code/02_reload_local.sql
 
 
 
 How to recreate GCATDB on OCI
 -----------------------------
 TODO, but these are guides that I've used in the past.
-* 03_setup_oci.txt
-* 04_reload_oci.sql
+* code/03_setup_oci.txt
+* code/04_reload_oci.sql
 
 
 
