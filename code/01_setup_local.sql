@@ -78,6 +78,8 @@ order by file_name;
 -- Create helper objects - one time step.
 --------------------------------------------------------------------------------
 @gcat_helper.pck;
+@data_dump.sql
+@gcat_exporter.pck;
 
 
 

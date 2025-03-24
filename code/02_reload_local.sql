@@ -1022,7 +1022,6 @@ from
 	from launch_staging
 	where "Group" <> '-'
 		--FIX: Ignore this value until RIT exists in orgs file.
-		and not ("Launch_Tag" = '2021-S34' and "Group" = 'RIT/Zemcov')
 		and "Launch_Tag" in ('2023-S29', '2024-S76', '2024-S85')
 ) payload_list
 cross join gcat_helper.get_nt_from_list(payload_orgs, '/')
@@ -2284,3 +2283,16 @@ select * from all_objects where owner = 'GCAT_TEST';
 select max(l_launch_date) from gcat_test.launch;
 */
 
+
+
+
+--------------------------------------------------------------------------------
+-- Create flat file exports: Oracle single-file, CSV, CSV+PostgreSQL.
+--------------------------------------------------------------------------------
+begin
+	--TODO: Fix these.
+	gcat_exporter.generate_oracle_file;
+	gcat_exporter.generate_csv_files;
+	gcat_exporter.generate_postgres_file;
+end;
+/
