@@ -232,3 +232,45 @@ end;
 grant alter on sys.gcat_curl_job to jheller;
 
 
+
+
+--------------------------------------------------------------------------------
+-- Create job to tar and compress files - one time step.
+-- MUST RUN THIS AS SYS.
+--------------------------------------------------------------------------------
+
+--Must run this as SYS.
+--Based on https://asktom.oracle.com/pls/apex/asktom.search?tag=dbms-scheduler-execute-bat-file
+declare
+	v_job_name varchar(20) := 'SYS.GCAT_TAR_JOB';
+	v_unknown_job exception;
+	pragma exception_init(v_unknown_job, -27475);
+begin
+	--Ensure user is correct.
+	if user <> 'SYS' then
+		raise_application_error(-20000, 'You must run this PL/SQL block as sys, because only SYS ' ||
+			'has the right OS privileges to run the OS commands.');
+	end if;
+
+	--Drop old job, if any.
+	begin
+		dbms_scheduler.drop_job(v_job_name);
+	exception when v_unknown_job then null;
+	end;
+
+	--Create new job.
+	dbms_scheduler.create_job
+	(
+		job_name            => v_job_name,
+		job_type            => 'EXECUTABLE',
+		job_action          => 'C:\Windows\System32\tar.exe',
+		number_of_arguments => 3,
+		enabled             => false,
+		auto_drop           => false
+	);
+end;
+/
+
+grant alter on sys.gcat_tar_job to jheller;
+
+
