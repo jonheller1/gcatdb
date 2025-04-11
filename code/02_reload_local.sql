@@ -1345,7 +1345,7 @@ from
 		--Everything after the spaces and remove any asterisks
 		trim(regexp_substr(s_parent, '\s+.*', 1, 1)) s_parent_port,
 		--Is there an asterisk or not?
-		case when s_parent like '%*%' then '*' else null end s_parent_flag,
+		cast(case when s_parent like '%*%' then '*' else null end as varchar2(1)) s_parent_flag,
 		case
 			--I'm guessing for some of these dates.
 			when s_SDate like '%Jan  0' then replace(s_SDate, 'Jan  0', 'Jan')
@@ -2108,6 +2108,34 @@ order by coalesce(s_motor, "Name");
 
 
 
+--------------------------------------------------------------------------------
+-- Ensure that all columns are set to VARCHAR2, DATE, and NUMBER.
+-- Later export program only knows how to handle those three types, and they should be sufficient for all data.
+--------------------------------------------------------------------------------
+declare
+	v_bad_data_type_list varchar2(32767);
+begin
+	-- For all tables...
+	for i in 1 .. gcat_helper.c_ordered_objects.count loop
+		-- Gather a list of bad data types.
+		select
+			listagg(table_name || '.' || column_name || '(' || data_type || ')', ',')
+				within group (order by table_name, column_name) bad_data_type_list
+		into v_bad_data_type_list
+		from user_tab_columns
+		where table_name = gcat_helper.c_ordered_objects(i)
+			and data_type not in ('VARCHAR2', 'DATE', 'NUMBER', 'BINARY_DOUBLE')
+		order by table_name, column_name;
+
+		--Raise an exception if any found.
+		if v_bad_data_type_list is not null then
+			raise_application_error(-20000, 'Unexpected data types found: ' || v_bad_data_type_list);
+		end if;
+	end loop;
+end;
+/
+
+
 
 
 --------------------------------------------------------------------------------
@@ -2288,11 +2316,76 @@ select max(l_launch_date) from gcat_test.launch;
 
 --------------------------------------------------------------------------------
 -- Create flat file exports: Oracle single-file, CSV, CSV+PostgreSQL.
+-- Takes about 1 minute.
 --------------------------------------------------------------------------------
 begin
 	--TODO: Fix these.
 	gcat_exporter.generate_oracle_file;
-	gcat_exporter.generate_csv_files;
-	gcat_exporter.generate_postgres_file;
+--	gcat_exporter.generate_csv_files;
+	--TODO: Fix this:
+	--gcat_exporter.generate_postgres_file;
+end;
+/
+
+
+;
+zip oracle_create_gcatdb.sql.zip oracle_create_gcatdb.sql
+;
+
+/*
+Postgres error:
+ORA-31600: invalid input value NULL for parameter VALUE in function SET_FILTER
+ORA-06512: at "SYS.DBMS_SYS_ERROR", line 105
+ORA-06512: at "SYS.DBMS_METADATA_INT", line 5245
+ORA-06512: at "SYS.DBMS_METADATA_INT", line 9791
+ORA-06512: at "SYS.DBMS_METADATA", line 7518
+ORA-06512: at "JHELLER.GCAT_EXPORTER", line 62
+ORA-06512: at "JHELLER.GCAT_EXPORTER", line 445
+ORA-06512: at "JHELLER.GCAT_EXPORTER", line 522
+ORA-06512: at line 5
+
+View program sources of error stack?
+*/
+
+
+
+--------------------------------------------------------------------------------
+-- Tar and compress some of the files.
+--------------------------------------------------------------------------------
+declare
+	v_name varchar(20) := 'SYS.GCAT_TAR_JOB';
+	v_directory_path varchar2(128);
+begin
+	--Find the path.
+	select directory_path
+	into v_directory_path
+	from all_directories
+	where directory_name = 'GCATDB_EXPORT';
+
+	-- Create the Oracle SQL file.
+	-- (This .zip file is not ideal, because they export into subdirectories gcatdb/exports/, instead of directly into files.
+	dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 1, argument_value => '-caf');
+	dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 2, argument_value => v_directory_path || '\oracle_create_gcatdb.sql.zip');
+	dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 3, argument_value => v_directory_path || '\oracle_create_gcatdb.sql');
+	dbms_scheduler.run_job(v_name);
+/*
+	-- Create the CSV file.
+	dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 1, argument_value => '-czf');
+	dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 2, argument_value => v_directory_path || '\csv_files.zip');
+	dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 3, argument_value => v_directory_path || '\*.csv');
+	dbms_scheduler.run_job(v_name);
+*/
+end;
+/
+
+-- Remove the uncompressed files.
+begin
+	-- Remove CSV files:
+	for i in 1 .. gcat_helper.c_ordered_objects.count loop
+		utl_file.fremove(location => 'GCATDB_EXPORT', filename => gcat_helper.c_ordered_objects(i) || '.csv');
+	end loop;
+
+	-- Remove the Oracle .SQL file:
+	utl_file.fremove(location => 'GCATDB_EXPORT', filename => 'oracle_create_gcatdb.sql');
 end;
 /
