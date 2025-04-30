@@ -1,4 +1,4 @@
-Starting "JHELLER"."GCATDB_ORACLE_EXPORT_20250301130842":  
+Starting "JHELLER"."GCATDB_ORACLE_EXPORT_20250428235041":  
 Processing object type TABLE_EXPORT/TABLE/TABLE_DATA
 Processing object type TABLE_EXPORT/TABLE/INDEX/STATISTICS/INDEX_STATISTICS
 Processing object type TABLE_EXPORT/TABLE/STATISTICS/TABLE_STATISTICS
@@ -7,38 +7,38 @@ Processing object type TABLE_EXPORT/TABLE/TABLE
 Processing object type TABLE_EXPORT/TABLE/INDEX/INDEX
 Processing object type TABLE_EXPORT/TABLE/CONSTRAINT/CONSTRAINT
 Processing object type TABLE_EXPORT/TABLE/CONSTRAINT/REF_CONSTRAINT
-. . exported "JHELLER"."LAUNCH_AGENCY_ORG"               166.3 KB   76933 rows
-. . exported "JHELLER"."SATELLITE_OWNER_ORG"             122.3 KB   64788 rows
-. . exported "JHELLER"."ORGANIZATION"                    222.3 KB    3829 rows
-. . exported "JHELLER"."SATELLITE_MANUFACTURER_ORG"      94.32 KB   40475 rows
-. . exported "JHELLER"."PAYLOAD_CATEGORY"                53.17 KB   25377 rows
-. . exported "JHELLER"."LAUNCH_POINT"                    61.91 KB    2778 rows
+. . exported "JHELLER"."LAUNCH_AGENCY_ORG"               166.0 KB   77011 rows
+. . exported "JHELLER"."SATELLITE_OWNER_ORG"             124.1 KB   65458 rows
+. . exported "JHELLER"."ORGANIZATION"                    222.9 KB    3855 rows
+. . exported "JHELLER"."SATELLITE_MANUFACTURER_ORG"      94.68 KB   41137 rows
+. . exported "JHELLER"."PAYLOAD_CATEGORY"                54.14 KB   26016 rows
+. . exported "JHELLER"."LAUNCH_POINT"                    62.37 KB    2783 rows
 . . exported "JHELLER"."LAUNCH_INVESTIGATOR"             51.85 KB   11774 rows
-. . exported "JHELLER"."SITE"                            40.15 KB     700 rows
-. . exported "JHELLER"."ENGINE"                          38.39 KB    1431 rows
-. . exported "JHELLER"."LAUNCH_VEHICLE"                  31.89 KB    1778 rows
-. . exported "JHELLER"."REFERENCE"                       41.21 KB    3052 rows
-. . exported "JHELLER"."STAGE"                           33.85 KB    1552 rows
+. . exported "JHELLER"."SITE"                            40.26 KB     701 rows
+. . exported "JHELLER"."ENGINE"                          38.39 KB    1434 rows
+. . exported "JHELLER"."LAUNCH_VEHICLE"                  31.96 KB    1780 rows
+. . exported "JHELLER"."REFERENCE"                       41.54 KB    3056 rows
+. . exported "JHELLER"."STAGE"                           33.92 KB    1555 rows
 . . exported "JHELLER"."PLATFORM"                        19.08 KB     382 rows
-. . exported "JHELLER"."WORLD"                           22.63 KB     286 rows
-. . exported "JHELLER"."ORGANIZATION_ORG_TYPE"           21.82 KB    5627 rows
-. . exported "JHELLER"."LAUNCH_POINT_ORG"                14.11 KB    2724 rows
-. . exported "JHELLER"."ENGINE_PROPELLANT"               9.835 KB    2078 rows
-. . exported "JHELLER"."LAUNCH_VEHICLE_ORG"              16.56 KB    1869 rows
-. . exported "JHELLER"."PAYLOAD_DISCIPLINE"              11.39 KB    2374 rows
-. . exported "JHELLER"."STAGE_MANUFACTURER"              14.36 KB    1567 rows
-. . exported "JHELLER"."ENGINE_MANUFACTURER"             9.992 KB    1482 rows
-. . exported "JHELLER"."SITE_ORG"                        8.343 KB     711 rows
+. . exported "JHELLER"."WORLD"                           22.64 KB     286 rows
+. . exported "JHELLER"."ORGANIZATION_ORG_TYPE"           21.91 KB    5659 rows
+. . exported "JHELLER"."LAUNCH_POINT_ORG"                14.04 KB    2729 rows
+. . exported "JHELLER"."ENGINE_PROPELLANT"               9.859 KB    2083 rows
+. . exported "JHELLER"."LAUNCH_VEHICLE_ORG"              16.52 KB    1871 rows
+. . exported "JHELLER"."PAYLOAD_DISCIPLINE"              11.38 KB    2379 rows
+. . exported "JHELLER"."STAGE_MANUFACTURER"              14.39 KB    1570 rows
+. . exported "JHELLER"."ENGINE_MANUFACTURER"             10.06 KB    1485 rows
+. . exported "JHELLER"."SITE_ORG"                        8.343 KB     712 rows
+. . exported "JHELLER"."LAUNCH_VEHICLE_FAMILY"           7.703 KB     659 rows
 . . exported "JHELLER"."PLATFORM_ORG"                    6.476 KB     384 rows
-. . exported "JHELLER"."LAUNCH_VEHICLE_FAMILY"           7.664 KB     657 rows
-. . exported "JHELLER"."ORGANIZATION_TYPE"               5.546 KB      17 rows
-. . exported "JHELLER"."LAUNCH_PAYLOAD_ORG"              4.843 KB       3 rows
-. . exported "JHELLER"."LAUNCH"                          1.972 MB   75003 rows
-. . exported "JHELLER"."LAUNCH_VEHICLE_STAGE"            43.72 KB    4613 rows
-. . exported "JHELLER"."PAYLOAD"                         656.7 KB   24969 rows
-. . exported "JHELLER"."SATELLITE"                       7.093 MB  268316 rows
-Master table "JHELLER"."GCATDB_ORACLE_EXPORT_20250301130842" successfully loaded/unloaded
+. . exported "JHELLER"."ORGANIZATION_TYPE"               5.523 KB      17 rows
+. . exported "JHELLER"."LAUNCH"                          2.000 MB   75074 rows
+. . exported "JHELLER"."LAUNCH_PAYLOAD_ORG"                  0 KB       0 rows
+. . exported "JHELLER"."LAUNCH_VEHICLE_STAGE"            43.54 KB    4616 rows
+. . exported "JHELLER"."PAYLOAD"                         666.1 KB   25601 rows
+. . exported "JHELLER"."SATELLITE"                       7.126 MB  269661 rows
+Master table "JHELLER"."GCATDB_ORACLE_EXPORT_20250428235041" successfully loaded/unloaded
 ******************************************************************************
-Dump file set for JHELLER.GCATDB_ORACLE_EXPORT_20250301130842 is:
-  C:\GCATDB\EXPORTS\GCATDB_ORACLE_EXPORT_20250301130842.DMP
-Job "JHELLER"."GCATDB_ORACLE_EXPORT_20250301130842" successfully completed at Sat Mar 1 13:09:29 2025 elapsed 0 00:00:40
+Dump file set for JHELLER.GCATDB_ORACLE_EXPORT_20250428235041 is:
+  C:\GCATDB\EXPORTS\GCATDB_ORACLE_EXPORT_20250428235041.DMP
+Job "JHELLER"."GCATDB_ORACLE_EXPORT_20250428235041" successfully completed at Mon Apr 28 23:51:14 2025 elapsed 0 00:00:31

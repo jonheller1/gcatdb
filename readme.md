@@ -40,7 +40,7 @@ How to import the data into your local database
 
 		SQL> @oracle_create_gcatdb.sql
 
-**Postgres Instructions: (in progress**
+**Postgres Instructions: (in progress)**
 
 1. Download and unzip csv_files.zip.
 2. Download postgres_create_space.sql.
@@ -50,7 +50,7 @@ How to import the data into your local database
 		postgres=# \i postgres_create_space.sql
 
 
-**Other Database (Partial) Instructions:**
+**Other Database (Partial) Instructions: (in progress)**
 
 1. Download and unzip csv_files.zip.
 2. Load each of the CSV files.

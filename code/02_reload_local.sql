@@ -79,7 +79,7 @@ begin
 		if v_first_line = expected_headers.first_line then
 			null;
 		else
-			raise_application_error(-20000, 'For file ' || expected_headers.file_name || chr(10) ||
+			raise_application_error(-20000, 'Unexpected column. To fix, update GCAT_CONFIG_VW in 01_setup_local.sql, and add the column name and code in 02_reload_local.sql. For file ' || expected_headers.file_name || chr(10) ||
 				'Expected: ' || expected_headers.first_line || chr(10) ||
 				'Actual: ' || v_first_line);
 		end if;
@@ -611,7 +611,14 @@ alter table launch_point_org add constraint fk_launch_point_org_org foreign key(
 create table launch_vehicle_family compress as
 --FIX: Added distinct because there are duplicates.
 select distinct "Family" lvf_family
-from family_staging
+from
+(
+	select "Family" from family_staging
+	-- Fix: These are missing from family.tsv:
+	union all
+	select 'Spectrum' from dual union all
+	select 'PrSM' from dual
+)
 where "Family" <> '-'
 order by 1;
 
@@ -667,6 +674,17 @@ from
 --(Nullable column LV_VARIANT prevents primary key)
 alter table launch_vehicle add constraint uq_launch_vehicle unique(lv_name, lv_variant);
 alter table launch_vehicle add constraint fk_launch_vehicle_launch_vehicle_family foreign key (lv_lvf_family) references launch_vehicle_family(lvf_family);
+
+/*
+-- Missing familes can cause this error:
+-- ORA-02298: cannot validate (JHELLER.FK_LAUNCH_VEHICLE_LAUNCH_VEHICLE_FAMILY) - parent keys not found
+select lv_lvf_family
+from launch_vehicle lv
+left join launch_vehicle_family lvf
+	on lv.lv_lvf_family = lvf.lvf_family
+where lvf.lvf_family is null;
+*/
+
 
 --LAUNCH_VEHICLE_ORG
 create table launch_vehicle_org compress as
@@ -733,7 +751,8 @@ select /*+ no_gather_optimizer_statistics */
 	l_launch_category,
 	l_launch_status,
 	gcat_helper.gcat_to_number(l_launch_success_fraction) l_launch_success_fraction,
-	launch_service_type,
+	l_fail_code,
+	l_launch_service_type,
 	l_category,
 	l_primary_r_cite,
 	l_additional_r_cite,
@@ -823,6 +842,7 @@ from
 		end l_launch_category,
 		substr(l_launch_code, 2, 1) l_launch_status,
 		substr(l_launch_code, 3) l_launch_success_fraction,
+		l_fail_code,
 		l_group,
 		-- Begin Code to normalize "Group".
 		-- (Not all columns are used for this this table, but I want to show all the logic in one place.)
@@ -843,28 +863,30 @@ from
 			null
 		end pis,
 		-- Launch Service Type to the left of the first slash, or everything if there is no slash.
-		case when l_launch_code is null then
-			null
-		when gcat_helper.is_orbital(l_launch_code) = 1 then
-			case when instr(l_group, '/') = 0 then
-				l_group
-			else
-				substr(l_group, 1, instr(l_group, '/', 1)-1)
-			end
-		else
-			null
-		end launch_service_type,
-		-- Satellite Customer Types to the left of the first slash, or nothing is ther is no slash
-		case when l_launch_code is null then
-			null
-		when gcat_helper.is_orbital(l_launch_code) = 1 then
-			case when instr(l_group, '/') = 0 then
+		case
+			when l_launch_code is null then
 				null
-			else
-				substr(l_group, instr(l_group, '/', -1)+1)
-			end
+			when gcat_helper.is_orbital(l_launch_code) = 1 then
+				case when instr(l_group, '/') = 0 then
+					l_group
+				else
+					substr(l_group, 1, instr(l_group, '/', 1)-1)
+				end
 		else
 			null
+		end l_launch_service_type,
+		-- Satellite Customer Types to the left of the first slash, or nothing is ther is no slash
+		case
+			when l_launch_code is null then
+				null
+			when gcat_helper.is_orbital(l_launch_code) = 1 then
+				case when instr(l_group, '/') = 0 then
+					null
+				else
+					substr(l_group, instr(l_group, '/', -1)+1)
+				end
+			else
+				null
 		end satellite_customer_types,
 		-- End Code to normalize "Group".
 		l_category,
@@ -895,7 +917,8 @@ from
 			gcat_helper.convert_null_and_trim("RangeFlag"  ) l_rangeflag,
 			gcat_helper.convert_null_and_trim("Dest"       ) l_dest,
 			gcat_helper.convert_null_and_trim("OrbPay"     ) l_orbpay,
-			gcat_helper.convert_null_and_trim("Launch_Code") l_launch_code,
+			gcat_helper.convert_null_and_trim("LaunchCode" ) l_launch_code,
+			gcat_helper.convert_null_and_trim("FailCode"   ) l_fail_code,
 			--Fix:
 			case
 				when "Launch_Tag" = '1969-F13' then 'G'
@@ -1017,7 +1040,7 @@ from
 	--Get the list of payload orgs by including only things before the last slash.
 	select
 		"Launch_Tag" lpo_l_launch_tag,
-		"Launch_Code",
+		"LaunchCode",
 		rtrim(regexp_substr(replace("Group", '?'), '.*/'), '/') payload_orgs
 	from launch_staging
 	where "Group" <> '-'
@@ -1027,7 +1050,7 @@ from
 cross join gcat_helper.get_nt_from_list(payload_orgs, '/')
 where payload_orgs is not null
 	-- Agencies only apply to non-orbital launches
-	and gcat_helper.is_orbital("Launch_Code") = 0
+	and gcat_helper.is_orbital("LaunchCode") = 0
 order by 1,2;
 
 alter table launch_payload_org add constraint pk_launch_payload_org primary key(lpo_l_launch_tag, lpo_o_code);
@@ -1062,7 +1085,7 @@ from
 	--Get the list of investigators by removing everything before the last slash.
 	select
 		"Launch_Tag" li_l_launch_tag,
-		"Launch_Code",
+		"LaunchCode",
 		regexp_replace(replace("Group", '?'), '.*/') investigators
 	from launch_staging
 	where "Group" <> '-'
@@ -1070,7 +1093,7 @@ from
 cross join gcat_helper.get_nt_from_list(investigators, ',')
 where investigators is not null
 	-- Investigators only apply to non-orbital launches
-	and gcat_helper.is_orbital("Launch_Code") = 0;
+	and gcat_helper.is_orbital("LaunchCode") = 0;
 
 alter table launch_investigator add constraint pk_launch_investigator primary key(li_l_launch_tag, li_investigator);
 alter table launch_investigator add constraint fk_launch_investigator_launch foreign key(li_l_launch_tag) references launch(l_launch_tag);
@@ -1164,22 +1187,22 @@ from
 	(
 		--Rename spin columns.
 		select
-			gcat_helper.convert_null_and_trim("IDName"    ) spin_id_name,
-			gcat_helper.convert_null_and_trim("Rho"       ) w_spin_rho,
-			gcat_helper.convert_null_and_trim("IFac"      ) w_spin_intertial_factor,
-			gcat_helper.convert_null_and_trim("PoleRA"    ) w_spin_icrs_position_ra,
-			gcat_helper.convert_null_and_trim("PoleDec"   ) w_spin_icrs_position_dec,
-			gcat_helper.convert_null_and_trim("Meridian"  ) w_spin_meridian,
-			gcat_helper.convert_null_and_trim("SpinRate"  ) w_spin_rate,
-			gcat_helper.convert_null_and_trim("J2"        ) w_spin_j2,
-			gcat_helper.convert_null_and_trim("J4"        ) w_spin_j4,
-			gcat_helper.convert_null_and_trim("J6"        ) w_spin_j6,
-			gcat_helper.convert_null_and_trim("PoleRARate") w_spin_pole_ra_rate,
-			gcat_helper.convert_null_and_trim("PoleDecDec") w_spin_pole_dec_rate,
-			gcat_helper.convert_null_and_trim("PoleFunc"  ) w_spin_pole_function,
-			gcat_helper.convert_null_and_trim("SpinFunc"  ) w_spin_spin_function,
-			gcat_helper.convert_null_and_trim("InitFunc"  ) w_spin_init_function,
-			gcat_helper.convert_null_and_trim("JFile"     ) w_spin_jfile
+			gcat_helper.convert_null_and_trim("IDName"     ) spin_id_name,
+			gcat_helper.convert_null_and_trim("Rho"        ) w_spin_rho,
+			gcat_helper.convert_null_and_trim("IFac"       ) w_spin_intertial_factor,
+			gcat_helper.convert_null_and_trim("PoleRA"     ) w_spin_icrs_position_ra,
+			gcat_helper.convert_null_and_trim("PoleDec"    ) w_spin_icrs_position_dec,
+			gcat_helper.convert_null_and_trim("Meridian"   ) w_spin_meridian,
+			gcat_helper.convert_null_and_trim("SpinRate"   ) w_spin_rate,
+			gcat_helper.convert_null_and_trim("J2"         ) w_spin_j2,
+			gcat_helper.convert_null_and_trim("J4"         ) w_spin_j4,
+			gcat_helper.convert_null_and_trim("J6"         ) w_spin_j6,
+			gcat_helper.convert_null_and_trim("PoleRARate" ) w_spin_pole_ra_rate,
+			gcat_helper.convert_null_and_trim("PoleDecRate") w_spin_pole_dec_rate,
+			gcat_helper.convert_null_and_trim("PoleFunc"   ) w_spin_pole_function,
+			gcat_helper.convert_null_and_trim("SpinFunc"   ) w_spin_spin_function,
+			gcat_helper.convert_null_and_trim("InitFunc"   ) w_spin_init_function,
+			gcat_helper.convert_null_and_trim("JFile"      ) w_spin_jfile
 		from spin_staging
 	) spin
 		on world.w_idname = spin.spin_id_name
@@ -1983,9 +2006,8 @@ from
 		select
 			"Stage_Name" sm_stage_name,
 			--Fix:
-			replace(replace(replace(replace("Stage_Manufacturer"
+			replace(replace(replace("Stage_Manufacturer"
 				, 'NCSIST', '')
-				, 'ULA', 'ULAB')
 				, 'SALT', 'SAST')
 				, 'ARMT   -', 'ARMT'
 			) "Stage_Manufacturer" --TODO: Missing data from orgs.tsv?
@@ -2319,38 +2341,17 @@ select max(l_launch_date) from gcat_test.launch;
 -- Takes about 1 minute.
 --------------------------------------------------------------------------------
 begin
-	--TODO: Fix these.
 	gcat_exporter.generate_oracle_file;
---	gcat_exporter.generate_csv_files;
-	--TODO: Fix this:
-	--gcat_exporter.generate_postgres_file;
+	gcat_exporter.generate_csv_files;
+	gcat_exporter.generate_postgres_file;
 end;
 /
 
 
-;
-zip oracle_create_gcatdb.sql.zip oracle_create_gcatdb.sql
-;
-
-/*
-Postgres error:
-ORA-31600: invalid input value NULL for parameter VALUE in function SET_FILTER
-ORA-06512: at "SYS.DBMS_SYS_ERROR", line 105
-ORA-06512: at "SYS.DBMS_METADATA_INT", line 5245
-ORA-06512: at "SYS.DBMS_METADATA_INT", line 9791
-ORA-06512: at "SYS.DBMS_METADATA", line 7518
-ORA-06512: at "JHELLER.GCAT_EXPORTER", line 62
-ORA-06512: at "JHELLER.GCAT_EXPORTER", line 445
-ORA-06512: at "JHELLER.GCAT_EXPORTER", line 522
-ORA-06512: at line 5
-
-View program sources of error stack?
-*/
-
 
 
 --------------------------------------------------------------------------------
--- Tar and compress some of the files.
+-- Tar and compress some files, and remove uncompressed files.
 --------------------------------------------------------------------------------
 declare
 	v_name varchar(20) := 'SYS.GCAT_TAR_JOB';
@@ -2368,13 +2369,13 @@ begin
 	dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 2, argument_value => v_directory_path || '\oracle_create_gcatdb.sql.zip');
 	dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 3, argument_value => v_directory_path || '\oracle_create_gcatdb.sql');
 	dbms_scheduler.run_job(v_name);
-/*
+
 	-- Create the CSV file.
 	dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 1, argument_value => '-czf');
 	dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 2, argument_value => v_directory_path || '\csv_files.zip');
 	dbms_scheduler.set_job_argument_value( job_name => v_name, argument_position => 3, argument_value => v_directory_path || '\*.csv');
 	dbms_scheduler.run_job(v_name);
-*/
+
 end;
 /
 
